@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include <limine.h>
 
+#include "framebuffer/framebuffer.h"
+#include "graphics/graphics.h"
+
 // Set the base revision to 6, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
 // See specification for further info.
@@ -60,17 +63,29 @@ void kmain(void) {
 
     // Fetch the first framebuffer.
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
+    framebuffer_init(
+        framebuffer -> address,
+        framebuffer -> width,
+        framebuffer -> height,
+        framebuffer -> pitch
+    );
 
     // Print a nice pattern to screen as an example.
     // Note: we assume the framebuffer model is RGB with 32-bit pixels.
-    volatile uint32_t *fb_ptr = framebuffer->address;
-    for (size_t y = 0; y < framebuffer->height; y++) {
-        for (size_t x = 0; x < framebuffer->width; x++) {
-            uint32_t nX = x * 255 / framebuffer->width;
-            uint32_t nY = y * 255 / framebuffer->height;
-            fb_ptr[y * (framebuffer->pitch / 4) + x] = (nY << 8) | nX;
-        }
-    }
+   framebuffer_clear(0x000000);
+
+//    draw_rect(
+//     100,
+//     100,
+//     300,
+//     150,
+//     0x00FF00
+//    );
+
+    draw_line(50,50,700,400,0xFFFFFF);
+    draw_line(700,50,50,400,0xFF0000);
+    draw_line(400,0,400,500,0x00FF00);
+    draw_line(0,250,800,250,0x0000FF);
 
     // We're done, just hang...
     hcf();
