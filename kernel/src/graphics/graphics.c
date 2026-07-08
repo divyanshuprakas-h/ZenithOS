@@ -1,10 +1,6 @@
 #include "graphics.h"
 #include "framebuffer/framebuffer.h"
-
-static inline int abs_int(int x)
-{
-    return (x<0) ? -x : x;
-}
+#include "../lib/math.h"
 
 void draw_pixel(size_t x, size_t y, uint32_t color)
 {
