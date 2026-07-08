@@ -12,8 +12,31 @@ static void terminal_render(void);
 
 static void terminal_scroll(void)
 {
+    for (size_t row = 1; row < TERM_ROWS; row++)
+    {
+        for (size_t col = 0; col < TERM_COLS; col++)
+        {
+            terminal_buffer[row - 1][col] = terminal_buffer[row][col];
+        }
+    }
 
+    for (size_t col = 0; col < TERM_COLS; col++)
+    {
+        terminal_buffer[TERM_ROWS - 1][col].character = '#';
+        terminal_buffer[TERM_ROWS - 1][col].foreground = 0x00FF00;
+        terminal_buffer[TERM_ROWS - 1][col].background = 0x000000;
+    }
+
+    cursor_row = TERM_ROWS - 1;
+    cursor_col = 0;
+
+//     framebuffer_clear(0xFF0000);
+//     for (;;)
+//     {
+//         __asm__ volatile("hlt");
+//     }
 }
+
 
 void terminal_init(void)
 {
@@ -41,7 +64,7 @@ void terminal_putchar(char c)
 
         if (cursor_row >= TERM_ROWS)
         {
-            cursor_row = TERM_ROWS - 1;
+            terminal_scroll();
         }
 
         return;
@@ -49,7 +72,7 @@ void terminal_putchar(char c)
 
     if (cursor_row >= TERM_ROWS)
     {
-        cursor_row = TERM_ROWS - 1;
+        terminal_scroll();
         return;
     }
 
@@ -66,7 +89,7 @@ void terminal_putchar(char c)
 
         if (cursor_row >= TERM_ROWS)
         {
-            cursor_row = TERM_ROWS - 1;
+            terminal_scroll();
         }
     }
 }
@@ -80,6 +103,7 @@ void terminal_write(const char *str)
     }
     terminal_render();
 }
+
 
 void terminal_set_color(uint32_t color)
 {
