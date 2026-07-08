@@ -18,7 +18,7 @@ void draw_rect(
 {
     for (size_t yy = y; yy < y+height ; yy++)
     {
-        for (size_t xx = x; xx < x+height ; xx++)
+        for (size_t xx = x; xx < x+width ; xx++)
         {
             draw_pixel(xx, yy, color);
         }

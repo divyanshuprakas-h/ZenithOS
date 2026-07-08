@@ -19,4 +19,15 @@ void framebuffer_putpixel(
 
 void framebuffer_clear(uint32_t color);
 
+void *framebuffer_address(void);
+
+void framebuffer_scroll(
+    size_t pixels,
+    uint32_t clear_color
+);
+
+size_t framebuffer_width(void);
+size_t framebuffer_height(void);
+size_t framebuffer_pitch(void);
+
 #endif

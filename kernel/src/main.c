@@ -4,19 +4,18 @@
 #include <limine.h>
 
 #include "framebuffer/framebuffer.h"
-#include "graphics/graphics.h"
+#include "terminal/terminal.h"
 
-// Set the base revision to 6, this is recommended as this is the latest
-// base revision described by the Limine boot protocol specification.
-// See specification for further info.
+// -------------------------------------------------------------
+// Limine Base Revision
+// -------------------------------------------------------------
 
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
 
-// The Limine requests can be placed anywhere, but it is important that
-// the compiler does not optimise them away, so, usually, they should
-// be made volatile or equivalent, _and_ they should be accessed at least
-// once or marked as used with the "used" attribute as done here.
+// -------------------------------------------------------------
+// Framebuffer Request
+// -------------------------------------------------------------
 
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
@@ -24,69 +23,83 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
     .revision = 0
 };
 
-// Finally, define the start and end markers for the Limine requests.
-// These can also be moved anywhere, to any .c file, as seen fit.
+// -------------------------------------------------------------
+// Limine Start / End Markers
+// -------------------------------------------------------------
 
 __attribute__((used, section(".limine_requests_start")))
-static volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
+static volatile uint64_t limine_requests_start_marker[] =
+    LIMINE_REQUESTS_START_MARKER;
 
 __attribute__((used, section(".limine_requests_end")))
-static volatile uint64_t limine_requests_end_marker[] = LIMINE_REQUESTS_END_MARKER;
+static volatile uint64_t limine_requests_end_marker[] =
+    LIMINE_REQUESTS_END_MARKER;
 
-// Halt and catch fire function.
-static void hcf(void) {
-    for (;;) {
-#if defined (__x86_64__)
-        asm ("hlt");
-#elif defined (__aarch64__) || defined (__riscv)
-        asm ("wfi");
-#elif defined (__loongarch64)
-        asm ("idle 0");
+// -------------------------------------------------------------
+// Halt CPU
+// -------------------------------------------------------------
+
+static void hcf(void)
+{
+    for (;;)
+    {
+#if defined(__x86_64__)
+        __asm__ volatile("hlt");
+#elif defined(__aarch64__) || defined(__riscv)
+        __asm__ volatile("wfi");
 #endif
     }
 }
 
-// The following will be our kernel's entry point.
-// If renaming kmain() to something else, make sure to change the
-// linker script accordingly.
-void kmain(void) {
-    // Ensure the bootloader actually understands our base revision (see spec).
-    if (LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision) == false) {
+// -------------------------------------------------------------
+// Kernel Entry
+// -------------------------------------------------------------
+
+void kmain(void)
+{
+    // Check Limine revision
+    if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision))
+    {
         hcf();
     }
 
-    // Ensure we got a framebuffer.
-    if (framebuffer_request.response == NULL
-     || framebuffer_request.response->framebuffer_count < 1) {
+    // Check framebuffer
+    if (framebuffer_request.response == NULL ||
+        framebuffer_request.response->framebuffer_count < 1)
+    {
         hcf();
     }
 
-    // Fetch the first framebuffer.
-    struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
+    // Get framebuffer
+    struct limine_framebuffer *framebuffer =
+        framebuffer_request.response->framebuffers[0];
+
     framebuffer_init(
-        framebuffer -> address,
-        framebuffer -> width,
-        framebuffer -> height,
-        framebuffer -> pitch
+        framebuffer->address,
+        framebuffer->width,
+        framebuffer->height,
+        framebuffer->pitch
     );
 
-    // Print a nice pattern to screen as an example.
-    // Note: we assume the framebuffer model is RGB with 32-bit pixels.
-   framebuffer_clear(0x000000);
+    framebuffer_clear(0x000000);
 
-//    draw_rect(
-//     100,
-//     100,
-//     300,
-//     150,
-//     0x00FF00
-//    );
+    terminal_init();
 
-    draw_line(50,50,700,400,0xFFFFFF);
-    draw_line(700,50,50,400,0xFF0000);
-    draw_line(400,0,400,500,0x00FF00);
-    draw_line(0,250,800,250,0x0000FF);
+    terminal_write("====================================\n");
+    terminal_write("          ZenithOS Kernel\n");
+    terminal_write("====================================\n\n");
 
-    // We're done, just hang...
+    terminal_write("Framebuffer : OK\n");
+    terminal_write("Graphics    : OK\n");
+    terminal_write("Font        : OK\n");
+    terminal_write("Terminal    : OK\n\n");
+
+    terminal_write("Scrolling Test Begins...\n\n");
+
+    for (int i = 0; i < 100; i++)
+    {
+        terminal_write("This is a scrolling test line.\n");
+    }
+
     hcf();
 }
