@@ -1,4 +1,4 @@
-#include "gdt.h"'
+#include "gdt.h"
 #include "../stdio/printf.h"
 
 #include <stdint.h>
@@ -75,8 +75,8 @@ void gdt_init(void)
     gdtr.base = (uint64_t)&gdt;
 
     gdt_load(&gdtr);
-    kprintf("GDT Loaded Successfully!\n");
+    // kprintf("GDT Loaded Successfully!\n");
 
-    kprintf("GDTR Base  = %p\n", (void *)gdtr.base);
-    kprintf("GDTR Limit = %u\n", gdtr.limit);
+    // kprintf("GDTR Base  = %p\n", (void *)gdtr.base);
+    // kprintf("GDTR Limit = %u\n", gdtr.limit);
 }

@@ -9,6 +9,8 @@
 #include "stdio/printf.h"
 #include "lib/convert.h"
 #include "cpu/gdt.h"
+#include "cpu/idt.h"
+#include "cpu/exceptions.h"
 
 // Limine Base Revision
 
@@ -92,7 +94,28 @@ void kmain(void)
     terminal_write("Font        : OK\n");
     terminal_write("Terminal    : OK\n\n");
 
+    terminal_write("Before GDT\n");
+
     gdt_init();
+
+    terminal_write("After GDT\n");
+
+    idt_init();
+
+    terminal_write("After IDT\n");
+
+    __asm__ volatile (
+    "xor %%rdx, %%rdx\n\t"
+    "mov $10, %%rax\n\t"
+    "xor %%rcx, %%rcx\n\t"
+    "div %%rcx\n\t"
+    :
+    :
+    : "rax", "rcx", "rdx"
+
+
+);
+
 
     void *a = kmalloc(3);
     void *b = kmalloc(5);
