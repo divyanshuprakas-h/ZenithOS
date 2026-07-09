@@ -112,9 +112,15 @@ void kmain(void)
     kprintf("Negative = %d\n", -6789);
     kprintf("Zero = %d\n", 0);
 
+    kprintf("Unsigned = %u\n", 123456789u);
+    kprintf("Zero = %u\n", 0u);
+
+    int value = 42;
+
+    kprintf("Address of value : %p\n", &value);
+    kprintf("Heap             : %p\n", kernel_heap);
+
     terminal_write("ZenithOS booted!\n");
     
-    
-
     hcf();
 }

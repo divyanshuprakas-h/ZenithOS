@@ -45,7 +45,7 @@ void int_to_string(int value, char *buffer)
     }
 }
 
-void uint_to_hex(uint32_t value, char *buffer)
+void uint64_to_hex(uint64_t value, char *buffer)
 {
     const char digits[] = "0123456789ABCDEF";
 
@@ -67,6 +67,39 @@ void uint_to_hex(uint32_t value, char *buffer)
 
     int start = 0;
     int end = i-1;
+
+    while (start < end)
+    {
+        char temp = buffer[start];
+        buffer[start] = buffer[end];
+        buffer[end] = temp;
+
+        start++;
+        end--;
+    }
+}
+
+void uint_to_string(uint32_t value, char *buffer)
+{
+    if (value == 0)
+    {
+        buffer[0] = '0';
+        buffer[1] = '\0';
+        return;
+    }
+
+    int i = 0;
+
+    while (value > 0)
+    {
+        buffer[i++] = (value % 10) + '0';
+        value /= 10;
+    }
+
+    buffer[i] = '\0';
+
+    int start = 0;
+    int end = i - 1;
 
     while (start < end)
     {
