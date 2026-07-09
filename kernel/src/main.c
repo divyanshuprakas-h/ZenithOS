@@ -5,17 +5,16 @@
 
 #include "framebuffer/framebuffer.h"
 #include "terminal/terminal.h"
+#include "mm/heap.h"
+#include "stdio/printf.h"
+#include "lib/convert.h"
 
-// -------------------------------------------------------------
 // Limine Base Revision
-// -------------------------------------------------------------
 
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
 
-// -------------------------------------------------------------
 // Framebuffer Request
-// -------------------------------------------------------------
 
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
@@ -23,9 +22,7 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
     .revision = 0
 };
 
-// -------------------------------------------------------------
 // Limine Start / End Markers
-// -------------------------------------------------------------
 
 __attribute__((used, section(".limine_requests_start")))
 static volatile uint64_t limine_requests_start_marker[] =
@@ -35,9 +32,7 @@ __attribute__((used, section(".limine_requests_end")))
 static volatile uint64_t limine_requests_end_marker[] =
     LIMINE_REQUESTS_END_MARKER;
 
-// -------------------------------------------------------------
 // Halt CPU
-// -------------------------------------------------------------
 
 static void hcf(void)
 {
@@ -51,9 +46,9 @@ static void hcf(void)
     }
 }
 
-// -------------------------------------------------------------
 // Kernel Entry
-// -------------------------------------------------------------
+
+static uint8_t kernel_heap[1024 * 1024];
 
 void kmain(void)
 {
@@ -81,6 +76,8 @@ void kmain(void)
         framebuffer->pitch
     );
 
+    heap_init(kernel_heap, sizeof(kernel_heap));
+
     framebuffer_clear(0x000000);
 
     terminal_init();
@@ -94,12 +91,30 @@ void kmain(void)
     terminal_write("Font        : OK\n");
     terminal_write("Terminal    : OK\n\n");
 
-    terminal_write("Scrolling Test Begins...\n\n");
+    void *a = kmalloc(3);
+    void *b = kmalloc(5);
+    void *c = kmalloc(7);
 
-    for (int i = 0; i < 100; i++)
+    if (a && b && c)
     {
-        terminal_write("This is a scrolling test line.\n");
+        terminal_write("Heap Allocation OK\n");
     }
+    else
+    {
+        terminal_write("Heap Allocation FAILED\n");
+    }
+
+    kprintf("Hello from kprintf\n");
+
+    kprintf("Kernel: %s\n", "ZenithOS");
+    kprintf("Author: %s\n", "Divyanshu");
+    kprintf("Positive = %d\n", 12345);
+    kprintf("Negative = %d\n", -6789);
+    kprintf("Zero = %d\n", 0);
+
+    terminal_write("ZenithOS booted!\n");
+    
+    
 
     hcf();
 }

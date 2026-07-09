@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void heap_init(void *heap_start);
+void heap_init(void *start, size_t size);
 
 void *kmalloc(size_t size);
 
