@@ -8,6 +8,7 @@
 #include "mm/heap.h"
 #include "stdio/printf.h"
 #include "lib/convert.h"
+#include "cpu/gdt.h"
 
 // Limine Base Revision
 
@@ -90,6 +91,8 @@ void kmain(void)
     terminal_write("Graphics    : OK\n");
     terminal_write("Font        : OK\n");
     terminal_write("Terminal    : OK\n\n");
+
+    gdt_init();
 
     void *a = kmalloc(3);
     void *b = kmalloc(5);
