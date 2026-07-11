@@ -1,8 +1,8 @@
 #ifndef EXCEPTIONS_H
 #define EXCEPTIONS_H
 
-#include <stdint.h>
+#include "interrupt_context.h"
 
-void exception_dispatch(uint64_t interrupt_number);
+void exception_dispatch(interrupt_context_t *context);
 
 #endif

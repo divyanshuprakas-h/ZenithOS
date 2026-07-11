@@ -94,6 +94,26 @@ void terminal_putchar(char c)
     }
 }
 
+void terminal_backspace(void)
+{
+    if (cursor_row == 0 && cursor_col == 0)
+    {
+        return;
+    }
+
+    if (cursor_col == 0)
+    {
+        cursor_row--;
+        cursor_col = TERM_COLS;
+    }
+
+    cursor_col--;
+    terminal_buffer[cursor_row][cursor_col].character = ' ';
+    terminal_buffer[cursor_row][cursor_col].foreground = 0xFFFFFF;
+    terminal_buffer[cursor_row][cursor_col].background = 0x000000;
+    terminal_render();
+}
+
 void terminal_write(const char *str)
 {
     while (*str)

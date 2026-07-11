@@ -10,7 +10,16 @@
 #include "lib/convert.h"
 #include "cpu/gdt.h"
 #include "cpu/idt.h"
-#include "cpu/exceptions.h"
+#include "cpu/irq.h"
+#include "hal/apic.h"
+#include "hal/pic.h"
+#include "hal/pit.h"
+#include "drivers/keyboard.h"
+#include "drivers/mouse.h"
+#include "mm/memory_map.h"
+#include "mm/pmm.h"
+#include "vmm/page_table.h"
+#include "vmm/paging.h"
 
 // Limine Base Revision
 
@@ -22,6 +31,25 @@ static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
+    .revision = 0
+};
+
+//Memory map Request
+ __attribute__((used, section(".limine_requests")))
+    static volatile struct limine_memmap_request memmap_request = {
+        .id = LIMINE_MEMMAP_REQUEST_ID,
+        .revision = 0
+    };
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_executable_address_request executable_address_request = {
+    .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST_ID,
+    .revision = 0
+};
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST_ID,
     .revision = 0
 };
 
@@ -49,12 +77,48 @@ static void hcf(void)
     }
 }
 
+static void pmm_run_tests(void)
+{
+    terminal_write("\n===== PMM Allocation Test =====\n");
+
+    void *page1 = pmm_alloc_page();
+    void *page2 = pmm_alloc_page();
+    void *page3 = pmm_alloc_page();
+
+    kprintf("Page1 : %p\n", page1);
+    kprintf("Page2 : %p\n", page2);
+    kprintf("Page3 : %p\n", page3);
+
+    pmm_free_page(page2);
+
+    terminal_write("Freed Page2\n");
+
+    void *page4 = pmm_alloc_page();
+
+    kprintf("Page4 : %p\n", page4);
+    kprintf("Free Pages : %u\n", (unsigned)pmm_get_free_pages());
+    kprintf("Used Pages : %u\n", (unsigned)pmm_get_used_pages());
+
+    kprintf("\n");
+    kprintf("===== Lock Test =====\n");
+
+    kprintf("Free Pages : %u\n", (unsigned)pmm_get_free_pages());
+
+    pmm_lock_page((void *)0x1000);
+    kprintf("After Lock : %u\n", (unsigned)pmm_get_free_pages());
+
+    pmm_unlock_page((void *)0x1000);
+    kprintf("After Unlock : %u\n", (unsigned)pmm_get_free_pages());
+}
+
 // Kernel Entry
 
 static uint8_t kernel_heap[1024 * 1024];
 
 void kmain(void)
 {
+    __asm__ volatile("cli");
+
     // Check Limine revision
     if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision))
     {
@@ -68,6 +132,20 @@ void kmain(void)
         hcf();
     }
 
+    if (memmap_request.response == NULL)
+    {
+        hcf();
+    }
+
+    if (executable_address_request.response == NULL)
+    {
+        hcf();
+    }
+
+    if (hhdm_request.response == NULL)
+    {
+        hcf();
+    }
     // Get framebuffer
     struct limine_framebuffer *framebuffer =
         framebuffer_request.response->framebuffers[0];
@@ -89,64 +167,85 @@ void kmain(void)
     terminal_write("          ZenithOS Kernel\n");
     terminal_write("====================================\n\n");
 
-    terminal_write("Framebuffer : OK\n");
-    terminal_write("Graphics    : OK\n");
-    terminal_write("Font        : OK\n");
-    terminal_write("Terminal    : OK\n\n");
+    memory_map_init(memmap_request.response);
 
-    terminal_write("Before GDT\n");
+    memory_map_dump();
 
-    gdt_init();
+    pmm_init(
+        memmap_request.response,
+        executable_address_request.response
+    );
 
-    terminal_write("After GDT\n");
+    page_table_set_hhdm_offset(hhdm_request.response->offset);
 
-    idt_init();
+    paging_init();
 
-    terminal_write("After IDT\n");
+    kprintf("Kernel Physical : %p\n",
+    (void *)executable_address_request.response->physical_base);
 
-    __asm__ volatile (
-    "xor %%rdx, %%rdx\n\t"
-    "mov $10, %%rax\n\t"
-    "xor %%rcx, %%rcx\n\t"
-    "div %%rcx\n\t"
-    :
-    :
-    : "rax", "rcx", "rdx"
+    kprintf("Kernel Virtual  : %p\n",
+    (void *)executable_address_request.response->virtual_base);
+
+    pmm_run_tests();
+
+    // terminal_write("Framebuffer : OK\n");
+    // terminal_write("Graphics    : OK\n");
+    // terminal_write("Font        : OK\n");
+    // terminal_write("Terminal    : OK\n\n");
+
+    // terminal_write("Before GDT\n");
+
+    // gdt_init();
+
+    // terminal_write("After GDT\n");
+
+    // idt_init();
+
+    // terminal_write("After IDT\n");
+
+    // irq_init();
+    // apic_disable();
+    // pic_init();
+    // pit_init(PIT_DEFAULT_FREQUENCY_HZ);
+    // keyboard_init();
+    // mouse_init();
+
+    // terminal_write("After HAL\n");
 
 
-);
+    // void *a = kmalloc(3);
+    // void *b = kmalloc(5);
+    // void *c = kmalloc(7);
 
+    // if (a && b && c)
+    // {
+    //     terminal_write("Heap Allocation OK\n");
+    // }
+    // else
+    // {
+    //     terminal_write("Heap Allocation FAILED\n");
+    // }
 
-    void *a = kmalloc(3);
-    void *b = kmalloc(5);
-    void *c = kmalloc(7);
+    // kprintf("Hello from kprintf\n");
 
-    if (a && b && c)
-    {
-        terminal_write("Heap Allocation OK\n");
-    }
-    else
-    {
-        terminal_write("Heap Allocation FAILED\n");
-    }
+    // kprintf("Kernel: %s\n", "ZenithOS");
+    // kprintf("Author: %s\n", "Divyanshu");
+    // kprintf("Positive = %d\n", 12345);
+    // kprintf("Negative = %d\n", -6789);
+    // kprintf("Zero = %d\n", 0);
 
-    kprintf("Hello from kprintf\n");
+    // kprintf("Unsigned = %u\n", 123456789u);
+    // kprintf("Zero = %u\n", 0u);
 
-    kprintf("Kernel: %s\n", "ZenithOS");
-    kprintf("Author: %s\n", "Divyanshu");
-    kprintf("Positive = %d\n", 12345);
-    kprintf("Negative = %d\n", -6789);
-    kprintf("Zero = %d\n", 0);
+    // int value = 42;
 
-    kprintf("Unsigned = %u\n", 123456789u);
-    kprintf("Zero = %u\n", 0u);
+    // kprintf("Address of value : %p\n", &value);
+    // kprintf("Heap             : %p\n", kernel_heap);
 
-    int value = 42;
+    // terminal_write("ZenithOS booted!\n");
+    // terminal_write("Interrupts armed\n");
 
-    kprintf("Address of value : %p\n", &value);
-    kprintf("Heap             : %p\n", kernel_heap);
-
-    terminal_write("ZenithOS booted!\n");
+    // __asm__ volatile("sti");
     
     hcf();
 }
