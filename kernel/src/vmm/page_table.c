@@ -12,7 +12,7 @@ void page_table_set_hhdm_offset(uint64_t offset)
     hhdm_offset = offset;
 }
 
-static void *physical_to_virtual(uint64_t physical_address)
+void *page_table_physical_to_virtual(uint64_t physical_address)
 {
     return (void *)(uintptr_t)(physical_address + hhdm_offset);
 }
@@ -32,7 +32,7 @@ void page_table_init(void)
         return;
     }
 
-    kernel_pml4 = (page_table_t *)physical_to_virtual(
+    kernel_pml4 = (page_table_t *)page_table_physical_to_virtual(
         (uint64_t)(uintptr_t)pml4_physical
     );
 

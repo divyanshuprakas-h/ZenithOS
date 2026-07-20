@@ -18,8 +18,14 @@
 #include "drivers/mouse.h"
 #include "mm/memory_map.h"
 #include "mm/pmm.h"
+#include "mm/heap.h"
 #include "vmm/page_table.h"
 #include "vmm/paging.h"
+
+#include "gui/gui.h"
+#include "apps/terminal_app.h"
+#include "gui/desktop.h"
+#include "gui/gui_state.h"
 
 // Limine Base Revision
 
@@ -113,7 +119,7 @@ static void pmm_run_tests(void)
 
 // Kernel Entry
 
-static uint8_t kernel_heap[1024 * 1024];
+// static uint8_t kernel_heap[1024 * 1024];
 
 void kmain(void)
 {
@@ -157,15 +163,13 @@ void kmain(void)
         framebuffer->pitch
     );
 
-    heap_init(kernel_heap, sizeof(kernel_heap));
-
     framebuffer_clear(0x000000);
 
     terminal_init();
 
-    terminal_write("====================================\n");
-    terminal_write("          ZenithOS Kernel\n");
-    terminal_write("====================================\n\n");
+    // terminal_write("====================================\n");
+    // terminal_write("          ZenithOS Kernel\n");
+    // terminal_write("====================================\n\n");
 
     memory_map_init(memmap_request.response);
 
@@ -178,15 +182,63 @@ void kmain(void)
 
     page_table_set_hhdm_offset(hhdm_request.response->offset);
 
-    paging_init();
+    heap_init();
+    void *a = kmalloc(64);
+    void *b = kmalloc(128);
+    void *c = kmalloc(256);
 
-    kprintf("Kernel Physical : %p\n",
-    (void *)executable_address_request.response->physical_base);
+    kprintf("Allocated 1 = %p\n", a);
+    kprintf("Allocated 2 = %p\n", b);
+    kprintf("Allocated 3= %p\n", c);
 
-    kprintf("Kernel Virtual  : %p\n",
-    (void *)executable_address_request.response->virtual_base);
+    kfree(a);
+    terminal_write("Freed A\n");
 
-    pmm_run_tests();
+    kfree(b);
+    terminal_write("Freed B\n");
+
+    kfree(c);
+    terminal_write("Freed C\n");
+
+    void *d = kmalloc(600);
+    kprintf("D = %p\n", d);
+
+    terminal_write("Heap OK\n");
+
+    void *ptrs[500];
+
+    for (int i = 0; i < 500; i++)
+    {
+        ptrs[i] = kmalloc(64);
+    }
+
+    for (int i = 0; i < 500; i += 2)
+    {
+        kfree(ptrs[i]);
+    }
+
+    for (int i = 0; i < 250; i++)
+    {
+        ptrs[i] = kmalloc(64);
+
+        if (ptrs[i] == NULL)
+        {
+            kprintf("Reallocation failed!\n");
+            break;
+        }
+    }
+
+    kprintf("Heap stress test passed!\n");
+
+    // paging_init();
+
+    // kprintf("Kernel Physical : %p\n",
+    // (void *)executable_address_request.response->physical_base);
+
+    // kprintf("Kernel Virtual  : %p\n",
+    // (void *)executable_address_request.response->virtual_base);
+
+    // pmm_run_tests();
 
     // terminal_write("Framebuffer : OK\n");
     // terminal_write("Graphics    : OK\n");
@@ -195,20 +247,31 @@ void kmain(void)
 
     // terminal_write("Before GDT\n");
 
-    // gdt_init();
+    gdt_init();
+    terminal_write("GDT OK\n");
 
     // terminal_write("After GDT\n");
 
-    // idt_init();
+    idt_init();
+    terminal_write("IDT OK\n");
 
     // terminal_write("After IDT\n");
 
-    // irq_init();
-    // apic_disable();
-    // pic_init();
+    irq_init();
+    terminal_write("IRQ OK\n");
+
+    apic_disable();
+    terminal_write("APIC OK\n");
+
+    pic_init();
+    terminal_write("PIC OK\n");
+
     // pit_init(PIT_DEFAULT_FREQUENCY_HZ);
-    // keyboard_init();
-    // mouse_init();
+    keyboard_init();
+    terminal_write("Keyboard OK\n");
+
+    mouse_init();
+    terminal_write("Mouse OK\n");
 
     // terminal_write("After HAL\n");
 
@@ -245,7 +308,37 @@ void kmain(void)
     // terminal_write("ZenithOS booted!\n");
     // terminal_write("Interrupts armed\n");
 
-    // __asm__ volatile("sti");
+    __asm__ volatile("sti");
+    terminal_write("STI OK\n");
+
+   
     
+    // gui_init();
+    // terminal_write("GUI OK\n");
+
+    // terminal_app_init();
+    // terminal_write("Terminal App OK\n");
+
+    // desktop_init();
+    // terminal_write("Desktop Init OK\n");
+
+    // desktop_draw();
+    // terminal_write("Desktop Draw OK\n");
+
+    // while (1)
+    // {
+    //     if (gui_needs_redraw)
+    //     {
+    //         desktop_draw();
+    //         gui_needs_redraw = false;
+    //     }
+
+    //     __asm__ volatile("hlt");
+    // }
+
+    // kprintf("Width  : %u\n", (unsigned)framebuffer_width());
+    // kprintf("Height : %u\n", (unsigned)framebuffer_height());
+    // kprintf("Pitch  : %u\n", (unsigned)framebuffer_pitch());
+
     hcf();
 }

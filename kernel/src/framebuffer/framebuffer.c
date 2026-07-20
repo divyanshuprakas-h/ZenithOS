@@ -8,6 +8,8 @@ static size_t fb_pitch =0;
 
 static void *fb_address;
 
+static uint32_t *back_buffer = 0;
+
 
 void framebuffer_init(
     void *address,
@@ -32,7 +34,9 @@ void framebuffer_putpixel(
 
 {
     if (x >= fb_width || y >= fb_height)
-    return;
+    {
+        return;
+    }
 
     fb[y * fb_pitch + x] = color;
 }

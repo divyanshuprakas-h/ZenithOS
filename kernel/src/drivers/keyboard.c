@@ -38,8 +38,7 @@ void keyboard_handler(void)
 
     if (c != 0)
     {
-        char text[2] = { c, '\0' };
-        terminal_write(text);
+        terminal_handle_key(c);
     }
 }
 
