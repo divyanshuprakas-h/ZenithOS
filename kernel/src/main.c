@@ -205,30 +205,54 @@ void kmain(void)
 
     terminal_write("Heap OK\n");
 
-    void *ptrs[500];
 
-    for (int i = 0; i < 500; i++)
+    uint32_t *arr = (uint32_t *)kcalloc(16, sizeof(uint32_t));
+    for (int i =0 ; i < 16; i++)
     {
-        ptrs[i] = kmalloc(64);
+        kprintf("%u ", arr[i]);
     }
+    kprintf("\n");
 
-    for (int i = 0; i < 500; i += 2)
+    arr[5] = 1234;
+    for (int i = 0; i < 16; i++)
     {
-        kfree(ptrs[i]);
+        kprintf("%u ", arr[i]);
     }
+    kprintf("\n");
 
-    for (int i = 0; i < 250; i++)
-    {
-        ptrs[i] = kmalloc(64);
+    char *str = kmalloc(16);
+    str[0] = 'H';
+    str[1] = 'i';
+    str[2] = '\0';
 
-        if (ptrs[i] == NULL)
-        {
-            kprintf("Reallocation failed!\n");
-            break;
-        }
-    }
+    kprintf("%s\n",str);
+    str = krealloc(str, 64);
+    kprintf("%s\n", str);
 
-    kprintf("Heap stress test passed!\n");
+    // void *ptrs[500];
+
+    // for (int i = 0; i < 500; i++)
+    // {
+    //     ptrs[i] = kmalloc(64);
+    // }
+
+    // for (int i = 0; i < 500; i += 2)
+    // {
+    //     kfree(ptrs[i]);
+    // }
+
+    // for (int i = 0; i < 250; i++)
+    // {
+    //     ptrs[i] = kmalloc(64);
+
+    //     if (ptrs[i] == NULL)
+    //     {
+    //         kprintf("Reallocation failed!\n");
+    //         break;
+    //     }
+    // }
+
+    // kprintf("Heap stress test passed!\n");
 
     // paging_init();
 

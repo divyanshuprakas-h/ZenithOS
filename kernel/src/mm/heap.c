@@ -3,6 +3,7 @@
 
 #include "../stdio/printf.h"
 #include "../vmm/page_table.h"
+#include "../lib/memory.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -243,16 +244,60 @@ void *kmalloc(size_t size)
 
 void *kcalloc(size_t count, size_t size)
 {
-    (void)count;
-    (void)size;
-    return NULL;
+    if (count == 0 || size == 0)
+    {
+        return NULL;
+    }
+
+    if (count > SIZE_MAX / size)
+    {
+        return NULL;
+    }
+
+    size_t total = count * size;
+
+    void *ptr = kmalloc(total);
+
+    if (ptr == NULL)
+    {
+        return NULL;
+    }
+
+    k_memset(ptr, 0, total);
+    return ptr;
 }
 
 void *krealloc(void *ptr, size_t size)
 {
-    (void)ptr;
-    (void)size;
-    return NULL;
+    if (ptr == NULL)
+    {
+        return kmalloc(size);
+    }
+
+    if (size == 0)
+    {
+        kfree(ptr);
+        return NULL;
+    }
+
+    size = align_size(size);
+    heap_block_t *block = ((heap_block_t *)ptr) - 1;
+
+    if (block->size >= size)
+    {
+        return ptr;
+    }
+
+    void *new_ptr = kmalloc(size);
+    if (new_ptr == NULL)
+    {
+        return NULL;
+    }
+
+    k_memcpy(new_ptr, ptr, block->size);
+    kfree(ptr);
+
+    return new_ptr;
 }
 
 void kfree(void *ptr)
