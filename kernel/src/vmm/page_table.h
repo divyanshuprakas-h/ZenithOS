@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define PAGE_SIZE           4096ULL
 #define PAGE_TABLE_ENTRIES  512
@@ -36,3 +37,11 @@ void page_table_set_hhdm_offset(uint64_t offset);
 void page_table_init(void);
 
 void *page_table_physical_to_virtual(uint64_t physical_address);
+
+bool page_table_map(uint64_t virtual_address, uint64_t physical_address, uint64_t flags);
+
+bool page_table_unmap(uint64_t virtual_address);
+
+uint64_t page_table_translate(uint64_t virtual_address);
+
+void page_table_activate(void);

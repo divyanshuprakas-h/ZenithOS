@@ -254,7 +254,7 @@ void kmain(void)
 
     // kprintf("Heap stress test passed!\n");
 
-    // paging_init();
+    paging_init();
 
     // kprintf("Kernel Physical : %p\n",
     // (void *)executable_address_request.response->physical_base);
