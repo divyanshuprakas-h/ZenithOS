@@ -1,4 +1,6 @@
 #include "exceptions.h"
+#include "exceptions/page_fault.h"
+#include "exceptions/panic.h"
 
 #include "../stdio/printf.h"
 
@@ -53,7 +55,7 @@ static void print_register(const char *name, uint64_t value)
     kprintf("%s = %p\n", name, (void *)value);
 }
 
-void exception_dispatch(interrupt_context_t *context)
+static void generic_exception_handler(interrupt_context_t *context)
 {
     uint64_t interrupt_number = context->interrupt_number;
     const char *name = "Unknown Exception";
@@ -92,4 +94,21 @@ void exception_dispatch(interrupt_context_t *context)
     kprintf("\nSystem halted.\n");
 
     halt_forever();
+}
+
+void exception_dispatch(interrupt_context_t *context)
+{
+    switch (context->interrupt_number)
+    {
+        case EXCEPTION_PAGE_FAULT:
+            page_fault_handler(context);
+            break;
+
+        default:
+            kernel_panic(
+                exception_names[context->interrupt_number],
+                context
+            );
+            break;
+    }
 }

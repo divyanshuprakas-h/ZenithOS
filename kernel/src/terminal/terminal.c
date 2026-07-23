@@ -1,3 +1,4 @@
+#include "../graphics/graphics.h"
 #include "../framebuffer/framebuffer.h"
 #include "terminal.h"
 #include "../font/font.h"
@@ -5,10 +6,18 @@
 
 static size_t cursor_row;
 static size_t cursor_col;
+
+#define INPUT_BUFFER_SIZE 256
+
+static char input_buffer[INPUT_BUFFER_SIZE];
+static size_t input_length = 0;
+
 static terminal_cell_t terminal_buffer[TERM_ROWS][TERM_COLS];
 
 static uint32_t terminal_color = 0xFFFFFF;
-static void terminal_render(void);
+
+static int terminal_origin_x = 0;
+static int terminal_origin_y = 0;
 
 static void terminal_scroll(void)
 {
@@ -22,8 +31,8 @@ static void terminal_scroll(void)
 
     for (size_t col = 0; col < TERM_COLS; col++)
     {
-        terminal_buffer[TERM_ROWS - 1][col].character = '#';
-        terminal_buffer[TERM_ROWS - 1][col].foreground = 0x00FF00;
+        terminal_buffer[TERM_ROWS - 1][col].character = ' ';
+        terminal_buffer[TERM_ROWS - 1][col].foreground = 0xFFFFFF;
         terminal_buffer[TERM_ROWS - 1][col].background = 0x000000;
     }
 
@@ -37,6 +46,13 @@ static void terminal_scroll(void)
 //     }
 }
 
+void terminal_render(void);
+
+void terminal_set_origin(int x, int y)
+{
+    terminal_origin_x = x;
+    terminal_origin_y = y;
+}
 
 void terminal_init(void)
 {
@@ -132,7 +148,13 @@ void terminal_set_color(uint32_t color)
 
 void terminal_render(void)
 {
-    framebuffer_clear(0x000000);
+    fill_rect(
+        terminal_origin_x,
+        terminal_origin_y,
+        TERM_COLS * 16,
+        TERM_ROWS * 16,
+        0x000000
+    );
 
     for (size_t row = 0 ; row < TERM_ROWS; row ++)
     {
@@ -144,11 +166,29 @@ void terminal_render(void)
                 continue;
 
             draw_char(
-                col * 16,
-                row * 16,
+                terminal_origin_x + col * 16,
+                terminal_origin_y + row * 16,
                 cell->character,
                 cell->foreground
             );
         }
     }
+}
+
+void terminal_handle_key(char c)
+{
+    if (input_length >= INPUT_BUFFER_SIZE - 1)
+        return;
+
+    input_buffer[input_length++] = c;
+    input_buffer[input_length] = '\0';
+
+    terminal_putchar(c);
+    terminal_render();
+
+}
+
+const char *terminal_get_input(void)
+{
+    return input_buffer;
 }

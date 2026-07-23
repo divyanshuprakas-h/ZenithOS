@@ -1,9 +1,15 @@
 #include "graphics.h"
 #include "framebuffer/framebuffer.h"
+#include "../font/font.h"
 #include "../lib/math.h"
 
 void draw_pixel(size_t x, size_t y, uint32_t color)
 {
+    size_t width = framebuffer_width();
+    size_t height = framebuffer_height();
+
+    if (x >= width || y >= height)
+        return;
     framebuffer_putpixel(x, y, color);
 }
 
@@ -59,5 +65,49 @@ void draw_line(
             err += dx;
             y0 += sy;
         }
+    }
+}
+
+void fill_rect(
+    size_t x,
+    size_t y,
+    size_t width,
+    size_t height,
+    uint32_t color
+)
+{
+    for (size_t py = y; py < y + height; py++)
+    {
+        for (size_t px = x; px < x + width; px++)
+        {
+            draw_pixel(px, py, color);
+        }
+    }
+}
+
+void draw_text(
+    size_t x,
+    size_t y,
+    const char *text,
+    uint32_t color
+)
+{
+    if (!text)
+        return;
+
+    uint32_t scale = font_get_scale();
+
+    while (*text)
+    {
+        if (*text == '\n')
+        {
+            x = 0;
+            y += 8 * scale;
+            text ++;
+            continue;
+        }
+        draw_char_scaled(x, y, *text, color, scale);
+        x += 8 * scale;
+        text ++;
     }
 }

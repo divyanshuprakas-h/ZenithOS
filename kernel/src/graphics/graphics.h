@@ -22,4 +22,19 @@ void draw_line(
     uint32_t color
 );
 
+void fill_rect(
+    size_t x,
+    size_t y,
+    size_t width,
+    size_t height,
+    uint32_t color
+);
+
+void draw_text(
+    size_t x,
+    size_t y,
+    const char *text,
+    uint32_t color
+);
+
 #endif

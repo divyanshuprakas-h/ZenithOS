@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define TERM_COLS 80
-#define TERM_ROWS 25
+#define TERM_ROWS 50
 
 typedef struct 
 {
