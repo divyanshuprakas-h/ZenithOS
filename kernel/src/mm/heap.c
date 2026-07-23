@@ -5,6 +5,8 @@
 #include "../vmm/page_table.h"
 #include "../lib/memory.h"
 
+#include "../vmm/vma/vma.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -30,6 +32,10 @@ static heap_block_t *heap_head = NULL;
 static void *heap_start = NULL;
 static size_t heap_size = 0;
 
+static uint64_t heap_virtual_start;
+static uint64_t heap_virtual_end;
+static uint64_t heap_committed_end;
+
 static heap_block_t *find_free_block(size_t size)
 {
     heap_block_t *current = heap_head;
@@ -42,6 +48,7 @@ static heap_block_t *find_free_block(size_t size)
         }
         current = current->next;
     }
+    return NULL;
 }
 
 static void split_block(heap_block_t *block, size_t size)
@@ -132,7 +139,8 @@ static void merge_with_previous(heap_block_t *block)
 
 static size_t align_size(size_t size)
 {
-    return(size + (HEAP_ALIGNMENT - 1) & ~(HEAP_ALIGNMENT - 1));
+    return(size + (HEAP_ALIGNMENT - 1)) & 
+            ~(HEAP_ALIGNMENT - 1); 
 }
 
 static heap_block_t *find_last_block(void)
@@ -147,23 +155,91 @@ static heap_block_t *find_last_block(void)
     return current;
 }
 
+static const vma_t *heap_vma = NULL;
+
+static void *heap_commit_page(uint64_t virtual_address)
+{
+    void *physical = pmm_alloc_page();
+    if (physical == NULL)
+        return NULL;
+
+    if (!page_table_map_page(
+        virtual_address,
+        (uint64_t)(uintptr_t)physical,
+        true
+    ))
+    {
+        return NULL;
+    }
+    heap_committed_end += PAGE_SIZE;
+    
+    return (void *)virtual_address;
+}
+
+static heap_block_t *heap_create_block(
+    uint64_t virtual_address,
+    size_t size
+)
+{
+    heap_block_t *block = (heap_block_t *)virtual_address;
+
+    block->size = size - sizeof(heap_block_t);
+    block->free = true;
+    block->next = NULL;
+    block->prev = NULL;
+
+    return block;
+}
+
+static inline uint64_t heap_committed_size(void)
+{
+    return heap_committed_end - heap_virtual_start;
+}
+
+static inline uint64_t heap_next_commit_address(void)
+{
+    return heap_committed_end;
+}
+
+static bool heap_grow(size_t bytes)
+{
+    while (heap_committed_size() < bytes)
+    {
+        if (!heap_expand())
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool heap_expand(void)
 {
-    void *physical_page = pmm_alloc_page();
+    if (heap_vma == NULL)
+    {
+        kprintf("Heap VMA missing!\n");
+        return false;
+    }
 
-    if (physical_page == NULL)
+    uint64_t new_size = heap_committed_size() + HEAP_GROW_SIZE;
+    uint64_t commit_address = heap_next_commit_address();
+
+    kprintf("========== Heap Expand ==========\n");
+    kprintf("Current Heap Size : %u bytes\n", (unsigned)heap_committed_size());
+    kprintf("Requested Size    : %u bytes\n", (unsigned)new_size);
+
+    void *virtual_page = heap_commit_page(commit_address);
+
+    if (virtual_page == NULL)
     {
         return false;
     }
 
-    void *virtual_page = page_table_physical_to_virtual((uint64_t)(uintptr_t)physical_page);
 
-    heap_block_t *new_block = (heap_block_t *)virtual_page;
-
-    new_block->size = 4096 - sizeof(heap_block_t);
-    new_block->free = true;
-    new_block->next = NULL;
-    new_block->prev = NULL;
+    heap_block_t *new_block = heap_create_block(
+        (uint64_t)virtual_page,
+        HEAP_GROW_SIZE
+    );
 
     heap_block_t *last = find_last_block();
 
@@ -178,11 +254,13 @@ bool heap_expand(void)
     kprintf("Heap Expanded Successfully!\n");
     kprintf("Heap Expand: %p\n", virtual_page);
 
+    heap_size = heap_committed_end - heap_virtual_start;
+
+    kprintf("Committed End : %p\n", (void *)heap_committed_end);
+    kprintf("Heap Size : %u\n", (unsigned)heap_size);
+
     return true;
 }
-
-
-#define HEAP_INITIAL_SIZE 4096
 
 void heap_init(void)
 {
@@ -194,7 +272,30 @@ void heap_init(void)
         return;
     }
 
-    heap_start = page_table_physical_to_virtual((uint64_t)(uintptr_t)heap_physical);
+    if (!page_table_map_page(
+        HEAP_START_ADDRESS,
+        (uint64_t)(uintptr_t)heap_physical,
+        true
+    ))
+    {
+        kprintf("HEAP FAILED to map first HEAP PAGE\n");
+        return;
+    }
+
+    heap_virtual_start = HEAP_START_ADDRESS;
+
+    heap_virtual_end = HEAP_START_ADDRESS + HEAP_INITIAL_SIZE;
+
+    heap_committed_end = HEAP_START_ADDRESS + HEAP_INITIAL_SIZE;
+
+    heap_start = (void *)HEAP_START_ADDRESS;
+
+    heap_vma = vma_find(HEAP_START_ADDRESS);
+    if (heap_vma == NULL)
+    {
+        kprintf("Heap VMA not found!\n");
+        return;
+    }
 
     heap_size = HEAP_INITIAL_SIZE;
 
@@ -208,7 +309,10 @@ void heap_init(void)
 
     heap_head->prev = NULL;
 
+    kprintf("================================\n");
+
     kprintf("Heap Initialized\n");
+
     kprintf("Heap Start    :%p\n", heap_start);
     kprintf("Heap Size     :%u bytes\n", (unsigned)heap_size);
     kprintf("First Free    :%u bytes\n", (unsigned)heap_head->size);
@@ -228,7 +332,7 @@ void *kmalloc(size_t size)
 
     while ((block = find_free_block(size)) == NULL)
     {
-        if (!heap_expand())
+        if (!heap_grow(heap_committed_size() + HEAP_GROW_SIZE))
         {
             return NULL;
         }

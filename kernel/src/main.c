@@ -21,11 +21,15 @@
 #include "mm/heap.h"
 #include "vmm/page_table.h"
 #include "vmm/paging.h"
+#include "cpu/exceptions_test.h"
 
 #include "gui/gui.h"
 #include "apps/terminal_app.h"
 #include "gui/desktop.h"
 #include "gui/gui_state.h"
+
+#include "tests/tests.h"
+#include "vmm/vma/vma.h"
 
 // Limine Base Revision
 
@@ -125,34 +129,39 @@ void kmain(void)
 {
     __asm__ volatile("cli");
 
-    // Check Limine revision
-    if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision))
-    {
-        hcf();
-    }
+    /* ----------------------------------------------------
+     * Verify Limine Boot Requests
+     * ---------------------------------------------------- */
 
-    // Check framebuffer
+    if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision))
+
+        hcf();
+
+
     if (framebuffer_request.response == NULL ||
         framebuffer_request.response->framebuffer_count < 1)
-    {
+
         hcf();
-    }
+
 
     if (memmap_request.response == NULL)
-    {
+
         hcf();
-    }
+
 
     if (executable_address_request.response == NULL)
-    {
+
         hcf();
-    }
+        
 
     if (hhdm_request.response == NULL)
-    {
+
         hcf();
-    }
-    // Get framebuffer
+
+    /* ----------------------------------------------------
+     * Initialize Framebuffer
+     * ---------------------------------------------------- */
+
     struct limine_framebuffer *framebuffer =
         framebuffer_request.response->framebuffers[0];
 
@@ -160,16 +169,19 @@ void kmain(void)
         framebuffer->address,
         framebuffer->width,
         framebuffer->height,
-        framebuffer->pitch
-    );
+        framebuffer->pitch);
 
     framebuffer_clear(0x000000);
 
     terminal_init();
 
-    // terminal_write("====================================\n");
-    // terminal_write("          ZenithOS Kernel\n");
-    // terminal_write("====================================\n\n");
+    terminal_write("========================================\n");
+    terminal_write("              ZenithOS\n");
+    terminal_write("========================================\n\n");
+
+    /* ----------------------------------------------------
+     * Initialize Memory Subsystem
+     * ---------------------------------------------------- */
 
     memory_map_init(memmap_request.response);
 
@@ -177,192 +189,127 @@ void kmain(void)
 
     pmm_init(
         memmap_request.response,
-        executable_address_request.response
-    );
+        executable_address_request.response);
 
-    page_table_set_hhdm_offset(hhdm_request.response->offset);
-
-    heap_init();
-    void *a = kmalloc(64);
-    void *b = kmalloc(128);
-    void *c = kmalloc(256);
-
-    kprintf("Allocated 1 = %p\n", a);
-    kprintf("Allocated 2 = %p\n", b);
-    kprintf("Allocated 3= %p\n", c);
-
-    kfree(a);
-    terminal_write("Freed A\n");
-
-    kfree(b);
-    terminal_write("Freed B\n");
-
-    kfree(c);
-    terminal_write("Freed C\n");
-
-    void *d = kmalloc(600);
-    kprintf("D = %p\n", d);
-
-    terminal_write("Heap OK\n");
-
-
-    uint32_t *arr = (uint32_t *)kcalloc(16, sizeof(uint32_t));
-    for (int i =0 ; i < 16; i++)
-    {
-        kprintf("%u ", arr[i]);
-    }
-    kprintf("\n");
-
-    arr[5] = 1234;
-    for (int i = 0; i < 16; i++)
-    {
-        kprintf("%u ", arr[i]);
-    }
-    kprintf("\n");
-
-    char *str = kmalloc(16);
-    str[0] = 'H';
-    str[1] = 'i';
-    str[2] = '\0';
-
-    kprintf("%s\n",str);
-    str = krealloc(str, 64);
-    kprintf("%s\n", str);
-
-    // void *ptrs[500];
-
-    // for (int i = 0; i < 500; i++)
-    // {
-    //     ptrs[i] = kmalloc(64);
-    // }
-
-    // for (int i = 0; i < 500; i += 2)
-    // {
-    //     kfree(ptrs[i]);
-    // }
-
-    // for (int i = 0; i < 250; i++)
-    // {
-    //     ptrs[i] = kmalloc(64);
-
-    //     if (ptrs[i] == NULL)
-    //     {
-    //         kprintf("Reallocation failed!\n");
-    //         break;
-    //     }
-    // }
-
-    // kprintf("Heap stress test passed!\n");
+    page_table_set_hhdm_offset(
+        hhdm_request.response->offset);
 
     paging_init();
 
-    // kprintf("Kernel Physical : %p\n",
-    // (void *)executable_address_request.response->physical_base);
+    vma_init();
 
-    // kprintf("Kernel Virtual  : %p\n",
-    // (void *)executable_address_request.response->virtual_base);
+    vma_create(
+        HEAP_START_ADDRESS,
+        HEAP_INITIAL_SIZE,
+        VMA_READ |
+        VMA_WRITE |
+        VMA_DEMAND_PAGED
+    );
 
-    // pmm_run_tests();
+    heap_init();
 
-    // terminal_write("Framebuffer : OK\n");
-    // terminal_write("Graphics    : OK\n");
-    // terminal_write("Font        : OK\n");
-    // terminal_write("Terminal    : OK\n\n");
-
-    // terminal_write("Before GDT\n");
-
-    gdt_init();
-    terminal_write("GDT OK\n");
-
-    // terminal_write("After GDT\n");
-
-    idt_init();
-    terminal_write("IDT OK\n");
-
-    // terminal_write("After IDT\n");
-
-    irq_init();
-    terminal_write("IRQ OK\n");
-
-    apic_disable();
-    terminal_write("APIC OK\n");
-
-    pic_init();
-    terminal_write("PIC OK\n");
-
-    // pit_init(PIT_DEFAULT_FREQUENCY_HZ);
-    keyboard_init();
-    terminal_write("Keyboard OK\n");
-
-    mouse_init();
-    terminal_write("Mouse OK\n");
-
-    // terminal_write("After HAL\n");
-
-
-    // void *a = kmalloc(3);
-    // void *b = kmalloc(5);
-    // void *c = kmalloc(7);
-
-    // if (a && b && c)
+    // for (int i = 0; i < 300; i++)
     // {
-    //     terminal_write("Heap Allocation OK\n");
+    //     kmalloc(32);
     // }
-    // else
-    // {
-    //     terminal_write("Heap Allocation FAILED\n");
-    // }
+    
+    bool overlap = vma_create(
+        HEAP_START_ADDRESS + 0x800,
+        4096,
+        VMA_READ |
+        VMA_WRITE |
+        VMA_DEMAND_PAGED
+    );
+    kprintf("Overlap Test : %s\n", overlap ? "FAILED" : "PASSED");
 
-    // kprintf("Hello from kprintf\n");
+    // bool destroyed = vma_destroy(0xFFFF900000000000ULL);
+    // kprintf("Destroy Test : %s\n", destroyed ? "PASSED" : "FAILED");
 
-    // kprintf("Kernel: %s\n", "ZenithOS");
-    // kprintf("Author: %s\n", "Divyanshu");
-    // kprintf("Positive = %d\n", 12345);
-    // kprintf("Negative = %d\n", -6789);
-    // kprintf("Zero = %d\n", 0);
+    vma_dump();
 
-    // kprintf("Unsigned = %u\n", 123456789u);
-    // kprintf("Zero = %u\n", 0u);
+    bool resized = vma_resize(
+        0xFFFF900000000000ULL,
+        32ULL * 1024 * 1024
+    );
+    kprintf("Resize Test : %s\n", resized ? "PASSED" : "FAILED");
 
-    // int value = 42;
+    vma_dump();
 
-    // kprintf("Address of value : %p\n", &value);
-    // kprintf("Heap             : %p\n", kernel_heap);
+    terminal_write("Memory Initialization Complete\n");
 
-    // terminal_write("ZenithOS booted!\n");
-    // terminal_write("Interrupts armed\n");
+    /* ----------------------------------------------------
+     * Initialize CPU
+     * ---------------------------------------------------- */
+
+
+    // gdt_init();
+
+
+    // idt_init();
+    
+
+    // irq_init();
+
+    // terminal_write("CPU Initialization Complete\n");
+
+    /* ----------------------------------------------------
+     * Initialize Hardware
+     * ---------------------------------------------------- */
+
+    // apic_disable();
+    // pic_init();
+
+    // keyboard_init();
+    // mouse_init();
+
+    // terminal_write("Driver Initialization Complete\n");
+
+    /* ----------------------------------------------------
+     * Run Kernel Tests
+     * ---------------------------------------------------- */
+
+    // page_table_activate();
+
+    // kernel_tests();
+
+    /* ----------------------------------------------------
+     * Enable Interrupts
+     * ---------------------------------------------------- */
 
     __asm__ volatile("sti");
-    terminal_write("STI OK\n");
 
-   
-    
-    // gui_init();
-    // terminal_write("GUI OK\n");
+    terminal_write("\nInterrupts Enabled\n");
 
-    // terminal_app_init();
-    // terminal_write("Terminal App OK\n");
+    // volatile uint64_t *ptr = (uint64_t *)0xFFFF900000100000ULL;
+    // *ptr = 0x12345678;
 
-    // desktop_init();
-    // terminal_write("Desktop Init OK\n");
+    terminal_write("ZenithOS Ready.\n");
 
-    // desktop_draw();
-    // terminal_write("Desktop Draw OK\n");
+    /* ----------------------------------------------------
+     * GUI (Enable Later)
+     * ---------------------------------------------------- */
 
-    // while (1)
-    // {
-    //     if (gui_needs_redraw)
-    //     {
-    //         desktop_draw();
-    //         gui_needs_redraw = false;
-    //     }
+    /*
+    gui_init();
 
-    //     __asm__ volatile("hlt");
-    // }
+    terminal_app_init();
 
-    // kprintf("Width  : %u\n", (unsigned)framebuffer_width());
-    // kprintf("Height : %u\n", (unsigned)framebuffer_height());
-    // kprintf("Pitch  : %u\n", (unsigned)framebuffer_pitch());
+    desktop_init();
+
+    desktop_draw();
+
+    while (1)
+    {
+        if (gui_needs_redraw)
+        {
+            desktop_draw();
+            gui_needs_redraw = false;
+        }
+
+        __asm__ volatile("hlt");
+    }
+    */
 
     hcf();
 }
+

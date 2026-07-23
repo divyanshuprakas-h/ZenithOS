@@ -5,6 +5,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define HEAP_START_ADDRESS 0xFFFF900000000000ULL
+#define HEAP_INITIAL_SIZE (4ULL * 1024)
+#define HEAP_MAX_SIZE (64ULL * 1024 * 1024)
+#define HEAP_GROW_SIZE 4096ULL
+
 bool heap_expand(void);
 
 void heap_init(void);

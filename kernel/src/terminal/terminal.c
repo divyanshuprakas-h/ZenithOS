@@ -31,8 +31,8 @@ static void terminal_scroll(void)
 
     for (size_t col = 0; col < TERM_COLS; col++)
     {
-        terminal_buffer[TERM_ROWS - 1][col].character = '#';
-        terminal_buffer[TERM_ROWS - 1][col].foreground = 0x00FF00;
+        terminal_buffer[TERM_ROWS - 1][col].character = ' ';
+        terminal_buffer[TERM_ROWS - 1][col].foreground = 0xFFFFFF;
         terminal_buffer[TERM_ROWS - 1][col].background = 0x000000;
     }
 
