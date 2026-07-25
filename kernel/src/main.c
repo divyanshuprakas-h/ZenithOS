@@ -31,6 +31,11 @@
 #include "tests/tests.h"
 #include "vmm/vma/vma.h"
 
+#include "tests/scheduler_test.h"
+#include "scheduler/task.h"
+#include "scheduler/context.h"
+#include "scheduler/scheduler.h"
+
 // Limine Base Revision
 
 __attribute__((used, section(".limine_requests")))
@@ -120,6 +125,8 @@ static void pmm_run_tests(void)
     pmm_unlock_page((void *)0x1000);
     kprintf("After Unlock : %u\n", (unsigned)pmm_get_free_pages());
 }
+
+static task_t *taskA = NULL;
 
 // Kernel Entry
 
@@ -237,6 +244,8 @@ void kmain(void)
 
     terminal_write("Memory Initialization Complete\n");
 
+
+
     /* ----------------------------------------------------
      * Initialize CPU
      * ---------------------------------------------------- */
@@ -284,6 +293,18 @@ void kmain(void)
     // *ptr = 0x12345678;
 
     terminal_write("ZenithOS Ready.\n");
+
+    /* ----------------------------------------------------
+     * Scheduler Test
+     * ---------------------------------------------------- */
+
+    taskA = task_create(task_a);
+    task_t *b = task_create(task_b);
+
+    scheduler_add_task(taskA);
+    scheduler_add_task(b);
+
+    scheduler_yield();
 
     /* ----------------------------------------------------
      * GUI (Enable Later)
