@@ -1,0 +1,8 @@
+#ifndef SCHEDULER_CONFIG_H
+#define SCHEDULER_CONFIG_H
+
+#define KERNEL_STACK_SIZE (16 * 1024)
+
+#define SCHEDULER_TIME_SLICE 10
+
+#endif
