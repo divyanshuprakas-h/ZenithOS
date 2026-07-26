@@ -1,5 +1,6 @@
 #include "pit.h"
 
+#include "../scheduler/scheduler.h"
 #include "../cpu/irq.h"
 #include "io.h"
 #include "pic.h"
@@ -27,8 +28,10 @@ static void pit_program(uint32_t frequency_hz)
 
 static void pit_irq_handler(interrupt_context_t *context)
 {
-    (void)context;
     system_ticks++;
+
+    scheduler_tick();
+    scheduler_preempt(context);
 }
 
 void pit_init(uint32_t frequency_hz)

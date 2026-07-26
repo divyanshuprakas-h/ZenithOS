@@ -1,6 +1,9 @@
 bits 64
 
 extern isr_dispatch
+extern scheduler_save_interrupt_context
+extern scheduler_get_next_interrupt_rsp
+extern scheduler_commit_pending_task
 
 global common_isr_entry
 global common_isr_exit
@@ -115,6 +118,18 @@ common_isr_entry:
     and rsp, -16
 
     call isr_dispatch
+
+    mov rdi, r12
+    call scheduler_save_interrupt_context
+
+    call scheduler_get_next_interrupt_rsp
+
+    test rax, rax
+    jz common_isr_exit
+
+    mov r12, rax
+
+    call scheduler_commit_pending_task
 
 common_isr_exit:
     mov rsp, r12

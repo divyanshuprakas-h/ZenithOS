@@ -3,4 +3,6 @@
 
 #define KERNEL_STACK_SIZE (16 * 1024)
 
+#define SCHEDULER_TIME_SLICE 10
+
 #endif

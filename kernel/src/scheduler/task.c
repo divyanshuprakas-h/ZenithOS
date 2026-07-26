@@ -3,7 +3,14 @@
 
 #include "../mm/heap.h"
 
+#include <stddef.h>
+
 static uint64_t next_task_id = 1;
+
+_Static_assert(offsetof(task_t, context) == 8, "task_t.context offset must match context.asm");
+_Static_assert(offsetof(task_t, entry) == 72, "task_t.entry offset must match context.asm");
+_Static_assert(offsetof(task_t, kernel_stack) == 80, "task_t.kernel_stack offset must match context.asm");
+_Static_assert(offsetof(task_t, next) == 104, "task_t.next offset must match context.asm");
 
 task_t *task_create(void (*entry)(void))
 {
@@ -36,9 +43,10 @@ task_t *task_create(void (*entry)(void))
     task->id = next_task_id++;
     task->entry = entry;
 
-    task->started = false;
-
     task->wake_tick = 0;
+
+    task->interrupt_rsp = NULL;
+    task->resume_mode = TASK_RESUME_CONTEXT;
 
     void *stack_top = (uint8_t *)stack + KERNEL_STACK_SIZE;
 

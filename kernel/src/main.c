@@ -28,13 +28,10 @@
 #include "gui/desktop.h"
 #include "gui/gui_state.h"
 
-#include "tests/tests.h"
 #include "vmm/vma/vma.h"
 
-#include "tests/scheduler_test.h"
-#include "scheduler/task.h"
-#include "scheduler/context.h"
 #include "scheduler/scheduler.h"
+#include "tests/scheduler_test.h"
 
 // Limine Base Revision
 
@@ -126,8 +123,6 @@ static void pmm_run_tests(void)
     kprintf("After Unlock : %u\n", (unsigned)pmm_get_free_pages());
 }
 
-static task_t *taskA = NULL;
-
 // Kernel Entry
 
 // static uint8_t kernel_heap[1024 * 1024];
@@ -215,33 +210,6 @@ void kmain(void)
 
     heap_init();
 
-    // for (int i = 0; i < 300; i++)
-    // {
-    //     kmalloc(32);
-    // }
-    
-    bool overlap = vma_create(
-        HEAP_START_ADDRESS + 0x800,
-        4096,
-        VMA_READ |
-        VMA_WRITE |
-        VMA_DEMAND_PAGED
-    );
-    kprintf("Overlap Test : %s\n", overlap ? "FAILED" : "PASSED");
-
-    // bool destroyed = vma_destroy(0xFFFF900000000000ULL);
-    // kprintf("Destroy Test : %s\n", destroyed ? "PASSED" : "FAILED");
-
-    vma_dump();
-
-    bool resized = vma_resize(
-        0xFFFF900000000000ULL,
-        32ULL * 1024 * 1024
-    );
-    kprintf("Resize Test : %s\n", resized ? "PASSED" : "FAILED");
-
-    vma_dump();
-
     terminal_write("Memory Initialization Complete\n");
 
 
@@ -251,35 +219,30 @@ void kmain(void)
      * ---------------------------------------------------- */
 
 
-    // gdt_init();
+    gdt_init();
 
 
-    // idt_init();
+    idt_init();
     
 
-    // irq_init();
+    irq_init();
 
-    // terminal_write("CPU Initialization Complete\n");
+    terminal_write("CPU Initialization Complete\n");
 
     /* ----------------------------------------------------
      * Initialize Hardware
      * ---------------------------------------------------- */
 
-    // apic_disable();
-    // pic_init();
+    apic_disable();
+    pic_init();
+    pit_init(100);
 
-    // keyboard_init();
-    // mouse_init();
+    keyboard_init();
+    mouse_init();
 
-    // terminal_write("Driver Initialization Complete\n");
+    terminal_write("Driver Initialization Complete\n");
 
-    /* ----------------------------------------------------
-     * Run Kernel Tests
-     * ---------------------------------------------------- */
-
-    // page_table_activate();
-
-    // kernel_tests();
+    page_table_activate();
 
     /* ----------------------------------------------------
      * Enable Interrupts
@@ -298,13 +261,8 @@ void kmain(void)
      * Scheduler Test
      * ---------------------------------------------------- */
 
-    taskA = task_create(task_a);
-    task_t *b = task_create(task_b);
-
-    scheduler_add_task(taskA);
-    scheduler_add_task(b);
-
-    scheduler_yield();
+    scheduler_init();
+    scheduler_run_sleep_test();
 
     /* ----------------------------------------------------
      * GUI (Enable Later)
@@ -333,4 +291,3 @@ void kmain(void)
 
     hcf();
 }
-

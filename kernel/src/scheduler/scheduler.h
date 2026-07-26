@@ -1,6 +1,9 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
+#include "../cpu/interrupts.h"
+#include "../cpu/interrupt_context.h"
+
 #include "task.h"
 
 void scheduler_init(void);
@@ -25,5 +28,14 @@ uint64_t scheduler_get_ticks(void);
 
 void scheduler_tick(void);
 
-#endif
+void scheduler_preempt(interrupt_context_t *context);
 
+void scheduler_save_interrupt_context(void *interrupt_rsp);
+
+void *scheduler_get_next_interrupt_rsp(void);
+
+task_t *scheduler_peek_next_ready_task(void);
+
+void scheduler_commit_pending_task(void);
+
+#endif

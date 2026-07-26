@@ -31,6 +31,13 @@ void context_switch(
     cpu_context_t *new_context
 );
 
+void context_switch_to_interrupt(
+    cpu_context_t *old_context,
+    void *interrupt_rsp
+);
+
+void context_resume_from_interrupt(cpu_context_t *context);
+
 void context_start(task_t *task);
 
 #endif

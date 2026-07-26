@@ -1,10 +1,8 @@
 #ifndef SCHEDULER_TEST_H
 #define SCHEDULER_TEST_H
 
-void scheduler_test_task(void);
+#include <stddef.h>
 
-void task_a(void);
-
-void task_b(void);
+void scheduler_run_sleep_test(void);
 
 #endif

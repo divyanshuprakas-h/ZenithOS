@@ -12,6 +12,7 @@ void context_init(
 
     uint64_t *stack = (uint64_t *)stack_top;
 
+    *(--stack) = 0;
     *(--stack) = (uint64_t)entry;
     context->rsp = (uint64_t)stack;
 }

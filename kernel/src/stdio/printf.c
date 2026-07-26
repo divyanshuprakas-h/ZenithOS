@@ -50,11 +50,36 @@ void kprintf(const char *fmt, ...)
                 continue;
             }
 
+            if (*fmt == 'l')
+            {
+                fmt++;
+
+                if (*fmt == 'l')
+                {
+                    fmt++;
+                }
+
+                if (*fmt == 'x')
+                {
+                    uint64_t value = va_arg(args, uint64_t);
+
+                    char buffer[17];
+                    uint64_to_hex(value, buffer);
+
+                    terminal_write(buffer);
+
+                    fmt++;
+                    continue;
+                }
+            }
+
             if (*fmt == 'x')
             {
-                uint64_t value = (uint64_t)va_arg(args, unsigned int);
+                unsigned int value = va_arg(args, unsigned int);
+
                 char buffer[17];
-                uint64_to_hex(value, buffer);
+                uint64_to_hex((uint64_t)value, buffer);
+
                 terminal_write(buffer);
 
                 fmt++;
@@ -75,7 +100,6 @@ void kprintf(const char *fmt, ...)
             if (*fmt == 'p')
             {
                 uintptr_t value = (uintptr_t)va_arg(args, void *);
-
                 char buffer[17];
 
                 uint64_to_hex((uint64_t)value, buffer);

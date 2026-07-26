@@ -1,39 +1,52 @@
 #include "../terminal/terminal.h"
 #include "../scheduler/scheduler.h"
 #include "../scheduler/task.h"
+#include "../stdio/printf.h"
 
-void scheduler_test_task(void)
+static task_t *sleep_test_task_a = NULL;
+static task_t *sleep_test_task_b = NULL;
+
+static void task_a(void)
 {
+    terminal_write("Test: A started\n");
+
     while (1)
     {
-        terminal_write("Scheduler Task Running\n");
+        terminal_putchar('A');
+        terminal_render();
 
-        for (volatile uint64_t i = 0; i < 50000000; i++)
+        for (volatile uint64_t i = 0; i < 1000000; i++)
         {
 
         }
     }
 }
 
-void task_a(void)
+static void task_b(void)
 {
-    terminal_write("A Started\n");
-    scheduler_block_current();
+    terminal_write("Task: B Started\n");
 
-    while(1)
+    while (1)
     {
-        terminal_write("A Started\n");
-
-        scheduler_yield();
+        terminal_putchar('B');
+        terminal_render();
     }
 }
 
-void task_b(void)
+void scheduler_run_sleep_test(void)
 {
-    while(1)
-    {
-        terminal_write("B\n");
+    terminal_write("Starting scheduler sleep test\n");
 
-        scheduler_yield();
+    sleep_test_task_a = task_create(task_a);
+    sleep_test_task_b = task_create(task_b);
+
+    if (sleep_test_task_a == NULL || sleep_test_task_b == NULL)
+    {
+        terminal_write("Scheduler sleep test setup failed\n");
+        return;
     }
+
+    scheduler_add_task(sleep_test_task_a);
+    scheduler_add_task(sleep_test_task_b);
+    scheduler_yield();
 }
