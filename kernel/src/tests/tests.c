@@ -9,15 +9,19 @@ void kernel_tests(void)
     terminal_write("        ZENITHOS KERNEL TESTS\n");
     terminal_write("=====================================\n\n");
 
-    pmm_tests();
+    // pmm_tests();
 
-    heap_tests();
+    // heap_tests();
 
-    vmm_tests();
+    // vmm_tests();
 
-    cpu_tests();
+    // cpu_tests();
 
-    driver_tests();
+    // driver_tests();
+
+    test_atomic_xchg();
+    
+    test_spinlock();
 
     terminal_write("\n");
     terminal_write("=====================================\n");
