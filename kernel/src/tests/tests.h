@@ -10,5 +10,6 @@ void kernel_tests(void);
 // void driver_tests(void);
 void test_atomic_xchg(void);
 void test_spinlock(void);
+void test_irq_spinlock(void);
 
 #endif

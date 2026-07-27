@@ -20,8 +20,10 @@ void kernel_tests(void)
     // driver_tests();
 
     test_atomic_xchg();
-    
+
     test_spinlock();
+
+    test_irq_spinlock();
 
     terminal_write("\n");
     terminal_write("=====================================\n");
