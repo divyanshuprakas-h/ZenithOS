@@ -32,6 +32,7 @@
 
 #include "scheduler/scheduler.h"
 #include "tests/scheduler_test.h"
+#include "tests/tests.h"
 
 // Limine Base Revision
 
@@ -262,7 +263,8 @@ void kmain(void)
      * ---------------------------------------------------- */
 
     scheduler_init();
-    scheduler_run_sleep_test();
+    kernel_tests();
+    // scheduler_run_sleep_test();
 
     /* ----------------------------------------------------
      * GUI (Enable Later)
