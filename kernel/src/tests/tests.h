@@ -13,6 +13,7 @@ void test_spinlock(void);
 void test_irq_spinlock(void);
 void test_mutex_init(void);
 void test_mutex_lock(void);
+void test_process_void(void);
 
 
 #endif

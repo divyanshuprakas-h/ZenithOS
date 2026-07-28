@@ -22,6 +22,8 @@ typedef enum
     TASK_RESUME_INTERRUPT
 } task_resume_mode_t;
 
+struct process;
+
 typedef struct task
 {
     uint64_t id;
@@ -44,6 +46,8 @@ typedef struct task
 
     task_resume_mode_t resume_mode;
 
+    struct process *process;
+
 } task_t;
 
 task_t *task_create(void(*entry)(void));
@@ -54,5 +58,7 @@ static inline bool task_resume_uses_interrupt_frame(const task_t *task)
            task->resume_mode == TASK_RESUME_INTERRUPT &&
            task->interrupt_rsp != NULL;
 }
+
+void task_exit(void);
 
 #endif

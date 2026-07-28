@@ -3,6 +3,7 @@
 
 #include "../mm/heap.h"
 #include "../stdio/printf.h"
+#include "../scheduler/scheduler.h"
 
 #include <stddef.h>
 
@@ -56,6 +57,8 @@ task_t *task_create(void (*entry)(void))
     task->interrupt_rsp = NULL;
     task->resume_mode = TASK_RESUME_CONTEXT;
 
+    task->process = NULL;
+
     void *stack_top = (uint8_t *)stack + KERNEL_STACK_SIZE;
 
     context_init(
@@ -70,4 +73,24 @@ task_t *task_create(void (*entry)(void))
             (void *)(uintptr_t)task->context.rsp);
 
     return task;
+}
+
+void task_exit(void)
+{
+    task_t *task = scheduler_current_task();
+
+    if (task == NULL)
+    {
+        return;
+    }
+
+    task->state = TASK_TERMINATED;
+
+    scheduler_yield();
+
+    for (;;)
+    {
+        __asm__ volatile("hlt");
+    }
+    
 }
