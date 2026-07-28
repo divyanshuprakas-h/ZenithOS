@@ -38,4 +38,8 @@ task_t *scheduler_peek_next_ready_task(void);
 
 void scheduler_commit_pending_task(void);
 
+task_t *scheduler_current_task(void);
+
+void scheduler_block_current_locked(void);
+
 #endif

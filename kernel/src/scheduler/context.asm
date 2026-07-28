@@ -3,6 +3,8 @@ global context_switch_to_interrupt
 global context_resume_from_interrupt
 global context_start
 
+extern scheduler_trace_context_switch_entry
+
 ; cpu_context_t offsets (bytes)
 
 %define CTX_RSP     0
@@ -73,6 +75,12 @@ section .text
 ; RSI = new cpu_context_t
 
 context_switch:
+    push rdi
+    push rsi
+    call scheduler_trace_context_switch_entry
+    pop rsi
+    pop rdi
+
     SAVE_CONTEXT rdi
     RESTORE_CONTEXT rsi
 

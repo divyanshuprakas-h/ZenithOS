@@ -32,6 +32,7 @@
 
 #include "scheduler/scheduler.h"
 #include "tests/scheduler_test.h"
+#include "tests/scheduler_mutex_test.h"
 #include "tests/tests.h"
 
 // Limine Base Revision
@@ -131,6 +132,7 @@ static void pmm_run_tests(void)
 void kmain(void)
 {
     __asm__ volatile("cli");
+    kprintf("[TRACE] kmain entry\n");
 
     /* ----------------------------------------------------
      * Verify Limine Boot Requests
@@ -262,9 +264,28 @@ void kmain(void)
      * Scheduler Test
      * ---------------------------------------------------- */
 
+    kprintf("[TRACE] scheduler_init()\n");
     scheduler_init();
+    kprintf("[TRACE] scheduler_init() done current_task=%p\n", scheduler_current_task());
+
+    kprintf("[TRACE] kernel_tests() begin\n");
     kernel_tests();
+    kprintf("[TRACE] kernel_tests() end\n");
     // scheduler_run_sleep_test();
+
+    terminal_write("333333333333333333333\n");
+    kprintf("[TRACE] kernel_tests() end\n");
+    terminal_write("444444444444444444444\n");
+
+    __asm__ volatile("cli");
+
+    kprintf("[TRACE] scheduler_mutex_test() begin\n");
+    terminal_write("555555555555555\n");
+
+    scheduler_mutex_test();
+
+    terminal_write("666666666666666\n");
+    kprintf("[TRACE] scheduler_mutex_test() returned\n");
 
     /* ----------------------------------------------------
      * GUI (Enable Later)

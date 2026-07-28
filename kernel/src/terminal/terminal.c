@@ -108,6 +108,8 @@ void terminal_putchar(char c)
             terminal_scroll();
         }
     }
+
+    // terminal_render();
 }
 
 void terminal_backspace(void)
