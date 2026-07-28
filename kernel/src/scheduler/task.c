@@ -2,6 +2,7 @@
 #include "config.h"
 
 #include "../mm/heap.h"
+#include "../stdio/printf.h"
 
 #include <stddef.h>
 
@@ -14,23 +15,30 @@ _Static_assert(offsetof(task_t, next) == 104, "task_t.next offset must match con
 
 task_t *task_create(void (*entry)(void))
 {
+    kprintf("[TRACE] task_create entry=%p\n", entry);
+
     if (entry == NULL)
     {
+        kprintf("[TRACE] task_create null entry\n");
         return NULL;
     }
 
     task_t *task = kmalloc(sizeof(task_t));
+    kprintf("[TRACE] task_create task=%p\n", task);
 
     if (task == NULL)
     {
+        kprintf("[TRACE] task_create failed allocating task\n");
         return NULL;
     }
 
     void *stack = kmalloc(KERNEL_STACK_SIZE);
+    kprintf("[TRACE] task_create stack=%p size=%u\n", stack, (unsigned)KERNEL_STACK_SIZE);
 
     if (stack == NULL)
     {
         kfree(task);
+        kprintf("[TRACE] task_create failed allocating stack\n");
         return NULL;
     }
 
@@ -55,6 +63,11 @@ task_t *task_create(void (*entry)(void))
         entry,
         stack_top
     );
+
+    kprintf("[TRACE] task_create kernel_stack=%p stack_top=%p context_rsp=%p\n",
+            task->kernel_stack,
+            stack_top,
+            (void *)(uintptr_t)task->context.rsp);
 
     return task;
 }

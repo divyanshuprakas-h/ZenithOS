@@ -48,6 +48,7 @@ static heap_block_t *find_free_block(size_t size)
         }
         current = current->next;
     }
+
     return NULL;
 }
 
@@ -133,6 +134,21 @@ static void merge_with_previous(heap_block_t *block)
         block->next->prev = prev;
     }
 
+}
+
+static void coalesce_free_blocks(void)
+{
+    heap_block_t *current = heap_head;
+
+    while (current != NULL)
+    {
+        while (current->free && current->next != NULL && current->next->free)
+        {
+            merge_with_next(current);
+        }
+
+        current = current->next;
+    }
 }
 
 #define HEAP_ALIGNMENT 16
@@ -235,13 +251,11 @@ bool heap_expand(void)
         return false;
     }
 
-
+    heap_block_t *last = find_last_block();
     heap_block_t *new_block = heap_create_block(
         (uint64_t)virtual_page,
-        HEAP_GROW_SIZE
+        PAGE_SIZE
     );
-
-    heap_block_t *last = find_last_block();
 
     last->next = new_block;
     new_block->prev = last;
@@ -255,6 +269,12 @@ bool heap_expand(void)
     kprintf("Heap Expand: %p\n", virtual_page);
 
     heap_size = heap_committed_end - heap_virtual_start;
+    heap_virtual_end = heap_committed_end;
+
+    if (!vma_resize(heap_vma->start, heap_size))
+    {
+        kprintf("Heap VMA resize failed!\n");
+    }
 
     kprintf("Committed End : %p\n", (void *)heap_committed_end);
     kprintf("Heap Size : %u\n", (unsigned)heap_size);
@@ -328,21 +348,24 @@ void *kmalloc(size_t size)
 
     size = align_size(size);
 
-    heap_block_t *block = find_free_block(size);
-
-    while ((block = find_free_block(size)) == NULL)
+    while (true)
     {
+        coalesce_free_blocks();
+
+        heap_block_t *block = find_free_block(size);
+        if (block != NULL)
+        {
+            split_block(block, size);
+            block->free = false;
+
+            return (void *)(block + 1);
+        }
+
         if (!heap_grow(heap_committed_size() + HEAP_GROW_SIZE))
         {
             return NULL;
         }
     }
-
-    split_block(block, size);
-
-    block->free = false;
-
-    return (void *)(block + 1);
 
 }
 

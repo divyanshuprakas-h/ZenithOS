@@ -5,7 +5,8 @@
 ARCH := x86_64
 
 # Default user QEMU flags. These are appended to the QEMU command calls.
-QEMUFLAGS := -m 2G
+# Route kernel debug output to the host terminal while keeping the guest window.
+QEMUFLAGS := -m 2G -debugcon stdio -global isa-debugcon.iobase=0xe9
 
 override IMAGE_NAME := template-$(ARCH)
 
