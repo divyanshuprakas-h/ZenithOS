@@ -67,25 +67,25 @@ static void scheduler_trace_task(const char *label, const task_t *task)
 {
     if (task == NULL)
     {
-        kprintf("[TRACE] %s task=NULL\n", label);
+        // kprintf("[TRACE] %s task=NULL\n", label);
         return;
     }
 
-    kprintf("[TRACE] %s task=%p id=%llu state=%s entry=%p stack=%p rsp=%p next=%p\n",
-            label,
-            task,
-            (unsigned long long)task->id,
-            scheduler_task_state_name(task->state),
-            task->entry,
-            task->kernel_stack,
-            (void *)(uintptr_t)task->context.rsp,
-            task->next);
+    // kprintf("[TRACE] %s task=%p id=%llu state=%s entry=%p stack=%p rsp=%p next=%p\n",
+    //         label,
+    //         task,
+    //         (unsigned long long)task->id,
+    //         scheduler_task_state_name(task->state),
+    //         task->entry,
+    //         task->kernel_stack,
+    //         (void *)(uintptr_t)task->context.rsp,
+    //         task->next);
 
-    kprintf("[TRACE] %s mode=%s interrupt_rsp=%p wake_tick=%llu\n",
-            label,
-            scheduler_resume_mode_name(task->resume_mode),
-            task->interrupt_rsp,
-            (unsigned long long)task->wake_tick);
+    // kprintf("[TRACE] %s mode=%s interrupt_rsp=%p wake_tick=%llu\n",
+    //         label,
+    //         scheduler_resume_mode_name(task->resume_mode),
+    //         task->interrupt_rsp,
+    //         (unsigned long long)task->wake_tick);
 }
 
 static void scheduler_reset_resume_state(task_t *task)
@@ -101,10 +101,10 @@ static void scheduler_reset_resume_state(task_t *task)
 
 void scheduler_trace_context_switch_entry(cpu_context_t *old_context, cpu_context_t *new_context)
 {
-    kprintf("[TRACE] context_switch entered old=%p new=%p new_rsp=%p\n",
-            old_context,
-            new_context,
-            new_context != NULL ? (void *)(uintptr_t)new_context->rsp : NULL);
+    // kprintf("[TRACE] context_switch entered old=%p new=%p new_rsp=%p\n",
+    //         old_context,
+    //         new_context,
+    //         new_context != NULL ? (void *)(uintptr_t)new_context->rsp : NULL);
 }
 
 
@@ -114,7 +114,7 @@ static task_t *scheduler_switch_to(task_t *next)
 
     if (next == NULL)
     {
-        kprintf("[TRACE] scheduler_switch_to next=NULL\n");
+        // kprintf("[TRACE] scheduler_switch_to next=NULL\n");
         return NULL;
     }
 
@@ -159,7 +159,7 @@ void scheduler_add_task(task_t *task)
 
     if (task == NULL)
     {
-        kprintf("[TRACE] scheduler_add_task task=NULL\n");
+        // kprintf("[TRACE] scheduler_add_task task=NULL\n");
         return;
     }
 
@@ -191,13 +191,13 @@ task_t *scheduler_schedule(void)
 
     if (next == NULL)
     {
-        kprintf("[TRACE] scheduler_schedule next=NULL\n");
+        // kprintf("[TRACE] scheduler_schedule next=NULL\n");
         return NULL;
     }
 
     if (next != idle)
     {
-        next = scheduler_ready_queue_pop();
+        scheduler_ready_queue_pop();
     }
 
     scheduler_trace_task("scheduler_schedule selected", next);
@@ -206,9 +206,9 @@ task_t *scheduler_schedule(void)
 
 void scheduler_yield(void)
 {
-    kprintf("[TRACE] scheduler_yield entry current=%p ready_head=%p\n",
-            current_task,
-            ready_queue);
+    // kprintf("[TRACE] scheduler_yield entry current=%p ready_head=%p\n",
+    //         current_task,
+    //         ready_queue);
 
     bool irq_was_enabled = interrupt_save();
     task_t *previous = current_task;
@@ -231,7 +231,7 @@ void scheduler_yield(void)
 
     if (next == NULL || next == previous)
     {
-        kprintf("[TRACE] scheduler_yield no switch next=%p previous=%p\n", next, previous);
+        // kprintf("[TRACE] scheduler_yield no switch next=%p previous=%p\n", next, previous);
         interrupt_restore(irq_was_enabled);
         return;
     }
@@ -239,9 +239,9 @@ void scheduler_yield(void)
     cpu_context_t *previous_context =
         previous != NULL ? &previous->context : &boot_context;
 
-    kprintf("[TRACE] scheduler_yield previous_context=%p next_context=%p\n",
-            previous_context,
-            &current_task->context);
+    // kprintf("[TRACE] scheduler_yield previous_context=%p next_context=%p\n",
+    //         previous_context,
+    //         &current_task->context);
 
     if (task_resume_uses_interrupt_frame(current_task))
     {
@@ -251,30 +251,30 @@ void scheduler_yield(void)
 
         if (next_interrupt_rsp == NULL)
         {
-            kprintf("[TRACE] scheduler_yield interrupt resume missing rsp\n");
+            // kprintf("[TRACE] scheduler_yield interrupt resume missing rsp\n");
             interrupt_restore(irq_was_enabled);
             return;
         }
 
-        kprintf("[TRACE] scheduler_yield interrupt frame rip=%p cs=%p rflags=%p rsp=%p ss=%p\n",
-                (void *)(uintptr_t)next_interrupt_frame->rip,
-                (void *)(uintptr_t)next_interrupt_frame->cs,
-                (void *)(uintptr_t)next_interrupt_frame->rflags,
-                (void *)(uintptr_t)0,
-                (void *)(uintptr_t)0);
-        kprintf("[TRACE] scheduler_yield context_switch_to_interrupt rsp=%p\n",
-                next_interrupt_rsp);
+        // kprintf("[TRACE] scheduler_yield interrupt frame rip=%p cs=%p rflags=%p rsp=%p ss=%p\n",
+        //         (void *)(uintptr_t)next_interrupt_frame->rip,
+        //         (void *)(uintptr_t)next_interrupt_frame->cs,
+        //         (void *)(uintptr_t)next_interrupt_frame->rflags,
+        //         (void *)(uintptr_t)0,
+        //         (void *)(uintptr_t)0);
+        // kprintf("[TRACE] scheduler_yield context_switch_to_interrupt rsp=%p\n",
+        //         next_interrupt_rsp);
         context_switch_to_interrupt(previous_context, next_interrupt_rsp);
     }
     else
     {
-        kprintf("[TRACE] scheduler_yield context_switch new_rsp=%p\n",
-                (void *)(uintptr_t)current_task->context.rsp);
+        // kprintf("[TRACE] scheduler_yield context_switch new_rsp=%p\n",
+        //         (void *)(uintptr_t)current_task->context.rsp);
         context_switch(previous_context, &current_task->context);
     }
 
     interrupt_restore(irq_was_enabled);
-    kprintf("[TRACE] scheduler_yield exit current=%p\n", current_task);
+    // kprintf("[TRACE] scheduler_yield exit current=%p\n", current_task);
 }
 
 task_t *scheduler_current_task(void)
@@ -386,7 +386,7 @@ static task_t *scheduler_ready_queue_pop(void)
 
     if (task == NULL)
     {
-        kprintf("[TRACE] scheduler_ready_queue_pop empty\n");
+        // kprintf("[TRACE] scheduler_ready_queue_pop empty\n");
         return NULL;
     }
 
@@ -475,9 +475,9 @@ void scheduler_save_interrupt_context(void *interrupt_rsp)
     current_task->interrupt_rsp = interrupt_rsp;
     current_task->resume_mode = TASK_RESUME_INTERRUPT;
 
-    kprintf("[TRACE] scheduler_save_interrupt_context task=%p rsp=%p\n",
-            current_task,
-            interrupt_rsp);
+    // kprintf("[TRACE] scheduler_save_interrupt_context task=%p rsp=%p\n",
+    //         current_task,
+    //         interrupt_rsp);
 }
 
 void *scheduler_get_next_interrupt_rsp(void)
@@ -551,3 +551,5 @@ void scheduler_commit_pending_task(void)
 
     pending_task = NULL;
 }
+
+
