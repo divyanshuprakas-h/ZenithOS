@@ -1,6 +1,8 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
+#include "../fs/fd.h"
+
 #include <stdint.h>
 
 struct task;
@@ -29,6 +31,8 @@ typedef struct process
     struct task *thread_list;
 
     struct process *next;
+
+    fd_table_t fd_table;
 
 }process_t;
 

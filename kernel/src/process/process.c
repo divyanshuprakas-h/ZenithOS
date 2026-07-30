@@ -6,6 +6,7 @@
 #include "../lib/string.h"
 #include "../lib/memory.h"
 #include "../stdio/printf.h"
+#include "../fs/fd.h"
 
 static uint64_t next_pid = 1;
 
@@ -32,6 +33,9 @@ process_t *process_create(
     {
         return NULL;
     }
+
+    k_memset(process, 0, sizeof(process_t));
+    fd_init(&process->fd_table);
 
     process->pid = process_allocate_pid();
 

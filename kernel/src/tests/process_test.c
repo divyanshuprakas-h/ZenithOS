@@ -1,5 +1,10 @@
 #include "../process/process.h"
 #include "../stdio/printf.h"
+#include "../fs/fd.h"
+#include "../fs/file.h"
+#include "../fs/sys_file.h"
+#include "../kernel_err/errno.h"
+#include "../lib/memory.h"
 
 #include <stddef.h>
 
@@ -29,7 +34,50 @@ void process_test(void)
 
     kprintf("Process %llu started\n", (unsigned long long)current->pid);
 
+    int fd = sys_open("/home/divyanshu/projects/notes.txt");
+
+    if (fd < 0)
+    {
+        kprintf("[FAIL] sys_open (%d)\n", fd);
+        process_exit(42);
+        return;
+    }
+
+    kprintf("[PASS] sys_open\n");
+    kprintf("FD = %d\n", fd);
+
+    const char *msg = "Hello from Process";
+
+    int written = sys_write(fd, msg, 18);
+
+    if (written >= 0)
+        kprintf("[PASS] sys_write\n");
+    else
+        kprintf("[FAIL] sys_write (%d)\n", written);
+
+    char buffer[64];
+
+    k_memset(buffer, 0, sizeof(buffer));
+
+    int bytes = sys_read(fd, buffer, sizeof(buffer));
+
+    if (bytes >= 0)
+    {
+        kprintf("[PASS] sys_read\n");
+        kprintf("Read: %s\n", buffer);
+    }
+    else
+    {
+        kprintf("[FAIL] sys_read (%d)\n", bytes);
+    }
+
+    if (sys_close(fd) == KERNEL_SUCCESS)
+        kprintf("[PASS] sys_close\n");
+    else       
+        kprintf("[FAIL] sys_close\n");
+
     process_exit(42);
+
 }
 
 void test_process_void(void)
@@ -40,6 +88,42 @@ void test_process_void(void)
     process_t *p1 = process_create("Process 1", process_test);
     process_t *p2 = process_create("Process 2", process_test);
     process_t *p3 = process_create("Process 3", process_test);
+
+    kprintf("\n===== PROCESS FD TABLE TEST =====\n");
+
+    file_t file1;
+    file_t file2;
+    file_t file3;
+
+    int fd1 = fd_allocate(&p1->fd_table, &file1);
+    int fd2 = fd_allocate(&p2->fd_table, &file2);
+    int fd3 = fd_allocate(&p3->fd_table, &file3);
+
+    kprintf("P1 FD = %d\n", fd1);
+    kprintf("P2 FD = %d\n", fd2);
+    kprintf("P3 FD = %d\n", fd3);
+
+    if (fd1 == 0 && fd2 == 0 && fd3 == 0)
+        kprintf("[PASS] Independent FD tables\n");
+    else
+        kprintf("[FAIL] Independent FD tables\n");
+
+    if (fd_get(&p1->fd_table, fd1) == &file1)
+        kprintf("[PASS] P1 FD lookup\n");
+    else
+        kprintf("[FAIL] P1 FD lookup\n");
+
+    if (fd_get(&p2->fd_table, fd2) == &file2)
+        kprintf("[PASS] P2 FD lookup\n");
+    else
+        kprintf("[FAIL] P2 FD lookup\n");
+
+    if (fd_get(&p3->fd_table, fd3) == &file3)
+        kprintf("[PASS] P3 FD lookup\n");
+    else
+        kprintf("[FAIL] P3 FD lookup\n");
+
+    kprintf("=================================\n");
     
     kprintf("P1 PID = %llu\n", (unsigned long long)p1->pid);
     kprintf("P2 PID = %llu\n", (unsigned long long)p2->pid);

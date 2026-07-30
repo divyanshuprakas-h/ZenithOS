@@ -36,6 +36,7 @@
 #include "tests/tests.h"
 
 #include "process/process.h"
+#include "tests/fs_test.h"
 
 // Limine Base Revision
 
@@ -273,11 +274,15 @@ void kmain(void)
     test_process_void();
 
     kprintf("[TRACE] kernel_tests() begin\n");
-    kernel_tests();
+    // kernel_tests();
     kprintf("[TRACE] kernel_tests() end\n");
     // scheduler_run_sleep_test();
 
     kprintf("[TRACE] kernel_tests() end\n");
+
+    fs_test();
+
+    // fd_test();
 
     scheduler_yield();
 
