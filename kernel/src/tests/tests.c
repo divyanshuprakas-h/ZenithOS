@@ -47,7 +47,6 @@ void kernel_tests(void)
     terminal_write("=====================================\n\n");
     kprintf("[TRACE] kernel_tests exit\n");
 
-    terminal_write("111111111111111111111\n");
     kprintf("[TRACE] kernel_tests exit\n");
-    terminal_write("222222222222222222222\n");
+
 }

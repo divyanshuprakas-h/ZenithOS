@@ -5,6 +5,8 @@
 #include "../fs/sys_file.h"
 #include "../kernel_err/errno.h"
 #include "../lib/memory.h"
+#include "../process/process_exec.h"
+#include "../elf/elf_loader.h"
 
 #include <stddef.h>
 
@@ -155,6 +157,32 @@ void test_process_void(void)
     else
     {
         kprintf("FAIL: Invalid PID should not exist!\n");
+    }
+
+    kprintf("=========================================\n");
+
+    kprintf("\n===== PROCESS IMAGE TEST =====\n");
+
+    elf_image_t image;
+
+    k_memset(&image, 0, sizeof(image));
+
+    image.base = (void *)0x100000;
+    image.size = 8192;
+    image.image_base = 0x400000;
+    image.entry = 0x401000;
+
+    if (process_load_image(p1, &image) == KERNEL_SUCCESS)
+    {
+        kprintf("[PASS] process_load_image\n");
+
+        kprintf("Image Base : 0x%llx\n", (unsigned long long)p1->image.image_base);
+        kprintf("Entry      : 0x%llx\n", (unsigned long long)p1->image.entry);
+        kprintf("Image Size : %llu\n", (unsigned long long)p1->image.size);
+    }
+    else
+    {
+        kprintf("[FAIL] process_load_image\n");
     }
 
     kprintf("=========================================\n");

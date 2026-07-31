@@ -3,3 +3,5 @@
 void fs_test(void);
 
 void fd_test(void);
+
+void elf_test(void);

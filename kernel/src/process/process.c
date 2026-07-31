@@ -7,6 +7,7 @@
 #include "../lib/memory.h"
 #include "../stdio/printf.h"
 #include "../fs/fd.h"
+#include  "../kernel_err/errno.h"
 
 static uint64_t next_pid = 1;
 
@@ -141,5 +142,16 @@ void process_exit(int exit_code)
 
     task_exit();
 
+}
+
+
+int process_load_image(process_t *process, const elf_image_t *image)
+{
+    if (process == NULL || image == NULL)
+        return KERNEL_EINVAL;
+
+    process->image = *image;
+
+    return KERNEL_SUCCESS;
 }
 
