@@ -46,6 +46,16 @@ process_t *process_create(
 
     process->parent = NULL;
 
+    process->page_table = page_table_create(&process->page_table_physical);
+
+    if (process->page_table == NULL)
+    {
+        return NULL;
+    }
+
+    kprintf("[PT] process->page_table_physical = %p\n", (void *)process->page_table_physical);
+    kprintf("[PROCESS] PID %u PML4 VA=%p PA=%p\n", process->pid, process->page_table, (void *)process->page_table_physical);
+
     process->next = process_list;
     process_list = process;
 
