@@ -37,6 +37,7 @@
 
 #include "process/process.h"
 #include "tests/fs_test.h"
+#include "process/process_exec_file.h"
 
 // Limine Base Revision
 
@@ -271,10 +272,8 @@ void kmain(void)
     scheduler_init();
     kprintf("[TRACE] scheduler_init() done current_task=%p\n", scheduler_current_task());
 
-    test_process_void();
-
     kprintf("[TRACE] kernel_tests() begin\n");
-    // kernel_tests();
+    kernel_tests();
     kprintf("[TRACE] kernel_tests() end\n");
     // scheduler_run_sleep_test();
 
@@ -282,7 +281,11 @@ void kmain(void)
 
     fs_test();
 
-    // fd_test();
+    fd_test();
+
+    elf_test();
+
+    test_process_void();
 
     scheduler_yield();
 

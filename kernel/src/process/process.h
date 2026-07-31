@@ -2,6 +2,7 @@
 #define PROCESS_H
 
 #include "../fs/fd.h"
+#include "../elf/elf_loader.h"
 
 #include <stdint.h>
 
@@ -32,6 +33,8 @@ typedef struct process
 
     struct process *next;
 
+    elf_image_t image;
+
     fd_table_t fd_table;
 
 }process_t;
@@ -50,5 +53,7 @@ void process_destroy(process_t *process);
 void process_test(void);
 
 void process_exit(int exit_code);
+
+int process_load_image(process_t *process, const elf_image_t *image);
 
 #endif
