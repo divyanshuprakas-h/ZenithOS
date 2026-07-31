@@ -37,6 +37,8 @@ typedef enum
 static uint64_t hhdm_offset;
 static bool hhdm_ready = false;
 
+static uint64_t active_pml4_physical = 0;
+
 static page_table_t *ensure_next_table(
     page_table_t *table,
     uint16_t index,
@@ -398,6 +400,40 @@ page_table_t *page_table_get_pml4(void)
     return page_table_active_root();
 }
 
+page_table_t *page_table_create(uint64_t *physical_out)
+{
+    void *physical_page = pmm_alloc_page();
+    kprintf("[PT] allocated PA = %p\n", physical_page);
+
+    if (physical_page == NULL)
+    {
+        return NULL;
+    }
+
+    if (physical_out !=NULL)
+    {
+        *physical_out = (uint64_t)(uintptr_t)physical_page;
+        kprintf("[PT] stored PA = %p\n", (void *)*physical_out);
+    }
+
+    page_table_t *new_pml4 = (page_table_t *)page_table_physical_to_virtual((uint64_t)(uintptr_t)physical_page);
+
+    if (new_pml4 == NULL)
+    {
+        pmm_free_page(physical_page);
+        return NULL;
+    }
+
+    k_memset(new_pml4, 0, PAGE_SIZE);
+
+    if (kernel_pml4 != NULL)
+    {
+        k_memcpy(new_pml4, kernel_pml4, PAGE_SIZE);
+    }
+
+    return new_pml4;
+}
+
 void page_table_init(void)
 {
     if (kernel_pml4 != NULL)
@@ -606,7 +642,27 @@ void page_table_activate(void)
 
     write_cr3(kernel_pml4_physical);
 
+    active_pml4_physical = kernel_pml4_physical;
+
     kprintf("CR3 switched successfully!\n");
+}
+
+void page_table_switch(uint64_t physical_pml4)
+{
+    if (physical_pml4 == 0)
+    {
+        kprintf("[PAGING] Invalid CR3 switch request\n");
+        return;
+    }
+
+    if (active_pml4_physical == physical_pml4)
+    {
+        return;
+    }
+
+    write_cr3(physical_pml4);
+
+    active_pml4_physical = physical_pml4;
 }
 
 page_entry_t *page_walk(

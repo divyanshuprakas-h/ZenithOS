@@ -32,6 +32,8 @@ typedef struct page_table
 
 page_table_t *page_table_get_pml4(void);
 
+page_table_t *page_table_create(uint64_t *physical_out);
+
 static inline bool page_is_present(page_entry_t entry)
 {
     return (entry & PAGE_PRESENT) != 0;
@@ -77,4 +79,6 @@ page_entry_t *page_walk(
 bool page_table_is_mapped(uint64_t virtual_address);
 
 void page_table_dump(uint64_t virtual_address);
+
+void page_table_switch(uint64_t physical_pml4);
 

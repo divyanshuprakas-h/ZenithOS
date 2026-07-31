@@ -3,6 +3,7 @@
 
 #include "../fs/fd.h"
 #include "../elf/elf_loader.h"
+#include "../vmm/page_table.h"
 
 #include <stdint.h>
 
@@ -36,6 +37,10 @@ typedef struct process
     elf_image_t image;
 
     fd_table_t fd_table;
+
+    page_table_t *page_table;
+
+    uint64_t page_table_physical;
 
 }process_t;
 

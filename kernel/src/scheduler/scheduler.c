@@ -5,6 +5,7 @@
 #include "../hal/pit.h"
 #include "../lib/memory.h"
 #include "../stdio/printf.h"
+#include "../process/process.h"
 
 #define KERNEL_CODE_SELECTOR 0x08ULL
 #define KERNEL_TRAMPOLINE_RFLAGS 0x02ULL
@@ -117,6 +118,13 @@ static task_t *scheduler_switch_to(task_t *next)
         // kprintf("[TRACE] scheduler_switch_to next=NULL\n");
         return NULL;
     }
+
+    if (next->process != NULL){
+        
+        page_table_switch(next->process->page_table_physical);
+        kprintf("[SCHED] Switching to PID=%llu CR3=%p\n", (unsigned long long)next->process->pid, (void *)next->process->page_table_physical);
+        
+    };
 
     current_task = next;
     preemption_ticks = 0;
