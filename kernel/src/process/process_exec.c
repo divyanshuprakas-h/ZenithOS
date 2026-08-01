@@ -3,6 +3,7 @@
 
 #include "../elf/elf_loader.h"
 #include "../kernel_err/errno.h"
+#include "../stdio/printf.h"
 
 #include <stddef.h>
 
@@ -39,6 +40,14 @@ int process_exec(process_t *process, const void *elf_image)
     }
 
     process->image = image;
+    
+    process->user_rip = image.entry;
+    process->user_rsp = process->user_stack_top;
+    process->user_rflags = 0x202;
+
+    kprintf("[USER] RIP = 0x%llx\n", (unsigned long long)process->user_rip);
+    kprintf("[USER] RSP = 0x%llx\n", (unsigned long long)process->user_rsp);
+    kprintf("[USER] RFLAGS = 0x%llx\n", (unsigned long long)process->user_rflags);
 
     return KERNEL_SUCCESS;
 }

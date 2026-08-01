@@ -52,6 +52,10 @@ typedef struct process
 
     uint64_t page_table_physical;
 
+    uint64_t user_rip;
+    uint64_t user_rsp;
+    uint64_t user_rflags;
+
 }process_t;
 
 process_t *process_create(
