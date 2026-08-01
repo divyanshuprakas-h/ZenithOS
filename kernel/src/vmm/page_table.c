@@ -543,6 +543,32 @@ bool page_table_map(uint64_t virtual_address, uint64_t physical_address, uint64_
 
 }
 
+bool page_table_map_user(
+    page_table_t *pml4,
+    uint64_t virtual_address,
+    uint64_t physical_address,
+    bool writable
+)
+{
+    uint64_t flags = PAGE_PRESENT | PAGE_USER;
+
+    if (writable)
+    {
+        flags |= PAGE_WRITABLE;
+    }
+
+    page_entry_t *entry = page_walk(pml4, virtual_address, true);
+
+    if (entry == NULL)
+    {
+        return false;
+    }
+
+    *entry = physical_address | flags;
+
+    return true;
+}
+
 bool page_table_map_page(uint64_t virtual_address, uint64_t physical_address, bool writable)
 {
     uint64_t flags = 0;
