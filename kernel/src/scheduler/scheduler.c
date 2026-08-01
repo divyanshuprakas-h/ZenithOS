@@ -6,6 +6,7 @@
 #include "../lib/memory.h"
 #include "../stdio/printf.h"
 #include "../process/process.h"
+#include "../cpu/tss.h"
 
 #define KERNEL_CODE_SELECTOR 0x08ULL
 #define KERNEL_TRAMPOLINE_RFLAGS 0x02ULL
@@ -125,6 +126,22 @@ static task_t *scheduler_switch_to(task_t *next)
         kprintf("[SCHED] Switching to PID=%llu CR3=%p\n", (unsigned long long)next->process->pid, (void *)next->process->page_table_physical);
         
     };
+
+    if (next != NULL)
+    {
+        static uint64_t last_rsp0 = 0;
+
+        uint64_t rsp0 = (uint64_t) next->kernel_stack + next->kernel_stack_size;
+
+        if (rsp0 != last_rsp0)
+        {
+            last_rsp0 = rsp0;
+            kprintf("[TSS] RSP0 = %p\n", (void *)rsp0);
+        }
+
+        tss_set_rsp0(rsp0);
+        
+    }
 
     current_task = next;
     preemption_ticks = 0;

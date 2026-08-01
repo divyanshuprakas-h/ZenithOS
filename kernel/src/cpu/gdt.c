@@ -1,5 +1,8 @@
 #include "gdt.h"
+#include "tss.h"
+
 #include "../stdio/printf.h"
+#include "../lib/memory.h"
 
 #include <stdint.h>
 
@@ -12,7 +15,7 @@ struct gdt_entry {
     uint8_t base_high;
 } __attribute__((packed));
 
-static struct gdt_entry gdt[3];
+static struct gdt_entry gdt[7];
 
 struct gdt_descriptor
 {
@@ -43,6 +46,27 @@ static void gdt_set_entry(
 
 }
 
+static void gdt_set_tss_descriptor(
+    int index,
+    uint64_t base,
+    uint32_t limit
+)
+{
+    uint64_t descriptor_low = 0;
+    uint64_t descriptor_high = 0;
+
+    descriptor_low |= (limit & 0xFFFFULL);
+    descriptor_low |= (base & 0xFFFFFFULL) << 16;
+    descriptor_low |= (uint64_t)0x89 << 40;
+    descriptor_low |= ((uint64_t)(limit >> 16) & 0xFULL) << 48;
+    descriptor_low |= ((base >> 24) & 0xFFULL) << 56;
+
+    descriptor_high = base >> 32;
+
+    k_memcpy(&gdt[index], &descriptor_low, sizeof(uint64_t));
+    k_memcpy(&gdt[index + 1], &descriptor_high, sizeof(uint64_t));
+
+}
 
 void gdt_init(void)
 
@@ -71,7 +95,32 @@ void gdt_init(void)
         0xA0
     );
 
+    gdt_set_entry(
+        3,
+        0,
+        0xFFFFF,
+        0xFA,
+        0xA0
+    );
+
+    gdt_set_entry(
+        4,
+        0,
+        0xFFFFF,
+        0xF2,
+        0xA0
+    );
+
+    gdt_set_tss_descriptor(
+        5,
+        (uint64_t)&kernel_tss,
+        sizeof(kernel_tss) - 1
+    );
+
     gdtr.limit = sizeof(gdt) - 1;
+
+    kprintf("[GDT] TSS Base = %p Size = %u\n", (void *)&kernel_tss, (unsigned)sizeof(kernel_tss));
+
     gdtr.base = (uint64_t)&gdt;
 
     gdt_load(&gdtr);
