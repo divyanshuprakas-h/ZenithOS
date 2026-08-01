@@ -1,4 +1,6 @@
 #include "process.h"
+#include "process_memory.h"
+#include "process_heap.h"
 
 #include "../scheduler/task.h"
 #include "../scheduler/scheduler.h"
@@ -8,6 +10,7 @@
 #include "../stdio/printf.h"
 #include "../fs/fd.h"
 #include  "../kernel_err/errno.h"
+#include "../vmm/user_vm_layout.h"
 
 static uint64_t next_pid = 1;
 
@@ -55,6 +58,30 @@ process_t *process_create(
 
     kprintf("[PT] process->page_table_physical = %p\n", (void *)process->page_table_physical);
     kprintf("[PROCESS] PID %u PML4 VA=%p PA=%p\n", process->pid, process->page_table, (void *)process->page_table_physical);
+
+    process->user_stack_top = USER_STACK_TOP;
+    process->user_stack_bottom = USER_STACK_TOP - USER_STACK_SIZE;
+
+    if (process_map_initial_stack(process) != KERNEL_SUCCESS)
+    {
+        kfree(process);
+        return NULL;
+    }
+
+    kprintf("[PROCESS] User Stack : 0x%llx - 0x%llx\n", 
+            (unsigned long long)process->user_stack_bottom, (unsigned long long)process->user_stack_top);
+
+    process->user_heap_start = USER_HEAP_BASE;
+    process->user_heap_end = USER_HEAP_BASE;
+    process->user_heap_current = USER_HEAP_BASE;
+
+    if (process_heap_expand(process) != KERNEL_SUCCESS)
+    {
+        kfree(process);
+        return NULL;
+    }
+
+    kprintf("[PROCESS] User Heap : 0x%llx\n", (unsigned long long)process->user_heap_start);
 
     process->next = process_list;
     process_list = process;

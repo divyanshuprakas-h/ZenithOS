@@ -76,6 +76,13 @@ page_entry_t *page_walk(
     bool create
 );
 
+bool page_table_map_user(
+    page_table_t *pml4,
+    uint64_t virtual_address,
+    uint64_t physical_address,
+    bool writable
+);
+
 bool page_table_is_mapped(uint64_t virtual_address);
 
 void page_table_dump(uint64_t virtual_address);

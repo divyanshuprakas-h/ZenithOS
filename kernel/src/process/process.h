@@ -36,6 +36,16 @@ typedef struct process
 
     elf_image_t image;
 
+    uint64_t user_stack_top;
+
+    uint64_t user_stack_bottom;
+
+    uint64_t user_heap_start;
+
+    uint64_t user_heap_end;
+
+    uint64_t user_heap_current;
+
     fd_table_t fd_table;
 
     page_table_t *page_table;
