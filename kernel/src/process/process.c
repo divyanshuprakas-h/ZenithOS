@@ -45,6 +45,10 @@ process_t *process_create(
 
     process->state = PROCESS_READY;
 
+    process->is_user_process = false;
+
+    process->user_started = false;
+
     process->exit_code = 0;
 
     process->parent = NULL;

@@ -54,9 +54,10 @@ static int write_init_elf(file_t *file)
     image.program_header.p_memsz = sizeof(image.payload);
     image.program_header.p_align = 0x1000;
 
-    image.payload[0] = 0xC3;
+    image.payload[0] = 0xEB;
+    image.payload[1] = 0xFE;
 
-    for (uint64_t i = 1; i < sizeof(image.payload); i++)
+    for (uint64_t i = 2; i < sizeof(image.payload); i++)
     {
         image.payload[i] = 0x90;
     }

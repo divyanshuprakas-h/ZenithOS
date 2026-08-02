@@ -79,6 +79,8 @@ void task_exit(void)
 {
     task_t *task = scheduler_current_task();
 
+    kprintf("[TASK] task_exit() task=%llu\n", (unsigned long long)task->id);
+
     if (task == NULL)
     {
         return;

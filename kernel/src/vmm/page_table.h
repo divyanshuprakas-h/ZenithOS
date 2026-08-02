@@ -17,6 +17,7 @@
 #define PAGE_GLOBAL        (1ULL << 8)
 #define PAGE_NO_EXECUTE    (1ULL << 63)
 
+
 #define PML4_INDEX(addr) (((uint64_t)(addr) >> 39) & 0x1FF)
 #define PDPT_INDEX(addr) (((uint64_t)(addr) >> 30) & 0x1FF)
 #define PD_INDEX(addr)   (((uint64_t)(addr) >> 21) & 0x1FF)
@@ -29,6 +30,13 @@ typedef struct page_table
 {
     page_entry_t entries[PAGE_TABLE_ENTRIES];
 }page_table_t;
+
+enum
+{
+    PAGE_TABLE_ADDRESS_MASK = 0x000FFFFFFFFFF000ULL,
+    PAGE_2MIB_SIZE = 1ULL << 21,
+    PAGE_1GIB_SIZE = 1ULL << 30,
+};
 
 page_table_t *page_table_get_pml4(void);
 

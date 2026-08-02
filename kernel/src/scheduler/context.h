@@ -40,4 +40,6 @@ void context_resume_from_interrupt(cpu_context_t *context);
 
 void context_start(task_t *task);
 
+void context_start_user(task_t *task);
+
 #endif
