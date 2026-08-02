@@ -5,6 +5,7 @@
 #include "../elf/elf_loader.h"
 #include "../vmm/page_table.h"
 
+
 #include <stdint.h>
 
 struct task;
@@ -55,6 +56,9 @@ typedef struct process
     uint64_t user_rip;
     uint64_t user_rsp;
     uint64_t user_rflags;
+
+    bool is_user_process;
+    bool user_started;
 
 }process_t;
 

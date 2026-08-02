@@ -4,6 +4,7 @@
 #include "../elf/elf_loader.h"
 #include "../kernel_err/errno.h"
 #include "../stdio/printf.h"
+#include "../vmm/page_table.h"
 
 #include <stddef.h>
 
@@ -42,12 +43,34 @@ int process_exec(process_t *process, const void *elf_image)
     process->image = image;
     
     process->user_rip = image.entry;
-    process->user_rsp = process->user_stack_top;
+
+    page_entry_t *pte = page_walk(process->page_table, process->user_rip, false);
+
+    if (pte == NULL)
+    {
+        kprintf("[USER] No PTE for entry!\n");
+        return KERNEL_EINVAL;
+    }
+
+    uint64_t phys = (*pte) & PAGE_TABLE_ADDRESS_MASK;
+
+    uint8_t *code = (uint8_t *)page_table_physical_to_virtual(phys);
+
+    kprintf("[USER CODE]\n");
+
+    for (int i = 0; i < 8; i++)
+    {
+        kprintf("Byte %d = 0x%llx\n", i, (unsigned long long)code[i]);
+    }
+
+    process->user_rsp = process->user_stack_top - 8;
     process->user_rflags = 0x202;
+    process->is_user_process = true;
 
     kprintf("[USER] RIP = 0x%llx\n", (unsigned long long)process->user_rip);
     kprintf("[USER] RSP = 0x%llx\n", (unsigned long long)process->user_rsp);
     kprintf("[USER] RFLAGS = 0x%llx\n", (unsigned long long)process->user_rflags);
+    kprintf("[PROCESS] PID %llu marked as USER process\n", (unsigned long long)process->pid);
 
     return KERNEL_SUCCESS;
 }

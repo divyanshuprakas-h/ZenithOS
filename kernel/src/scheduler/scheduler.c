@@ -7,6 +7,8 @@
 #include "../stdio/printf.h"
 #include "../process/process.h"
 #include "../cpu/tss.h"
+#include "../cpu/gdt.h"
+
 
 #define KERNEL_CODE_SELECTOR 0x08ULL
 #define KERNEL_TRAMPOLINE_RFLAGS 0x02ULL
@@ -25,15 +27,36 @@ static bool preemption_requested = false;
 
 static cpu_context_t boot_context;
 
-typedef struct interrupt_resume_frame
+typedef struct kernel_interrupt_frame
 {
     registers_t regs;
+
     uint64_t interrupt_number;
     uint64_t error_code;
+
     uint64_t rip;
     uint64_t cs;
     uint64_t rflags;
-} interrupt_resume_frame_t;
+
+    uint64_t rsp;
+    uint64_t ss;
+
+} kernel_interrupt_frame_t;
+
+typedef struct user_interrupt_frame
+{
+    registers_t regs;
+
+    uint64_t interrupt_number;
+    uint64_t error_code;
+
+    uint64_t rip;
+    uint64_t cs;
+    uint64_t rflags;
+
+    uint64_t rsp;
+    uint64_t ss;
+}user_interrupt_frame_t;
 
 static task_t *scheduler_ready_queue_pop(void);
 static void scheduler_sleep_queue_add(task_t *task);
@@ -140,7 +163,7 @@ static task_t *scheduler_switch_to(task_t *next)
         }
 
         tss_set_rsp0(rsp0);
-        
+
     }
 
     current_task = next;
@@ -226,6 +249,11 @@ task_t *scheduler_schedule(void)
     }
 
     scheduler_trace_task("scheduler_schedule selected", next);
+
+    if (next != NULL)
+    {
+        kprintf("[SCHED] schedule -> task=%llu state=%d\n", (unsigned long long)next->id, next->state);
+    }
     return scheduler_switch_to(next);
 }
 
@@ -271,8 +299,8 @@ void scheduler_yield(void)
     if (task_resume_uses_interrupt_frame(current_task))
     {
         void *next_interrupt_rsp = current_task->interrupt_rsp;
-        interrupt_resume_frame_t *next_interrupt_frame =
-            (interrupt_resume_frame_t *)next_interrupt_rsp;
+        kernel_interrupt_frame_t *next_interrupt_frame =
+            (kernel_interrupt_frame_t *)next_interrupt_rsp;
 
         if (next_interrupt_rsp == NULL)
         {
@@ -436,9 +464,46 @@ static void *scheduler_build_context_interrupt_rsp(task_t *task)
         return NULL;
     }
 
-    interrupt_resume_frame_t *frame =
-        (interrupt_resume_frame_t *)((uint8_t *)(uintptr_t)task->context.rsp -
-                                     sizeof(interrupt_resume_frame_t));
+    bool is_user = false;
+    if (task->process != NULL)
+    {
+        is_user = task->process->is_user_process;
+    }
+
+    if (is_user)
+    {
+        kprintf("[SCHED] Building USER interrupt frame\n");
+
+        user_interrupt_frame_t *frame = (user_interrupt_frame_t *)
+                                        ((uint8_t *)(uintptr_t)task->context.rsp - sizeof(user_interrupt_frame_t));
+
+        k_memset(frame, 0, sizeof(*frame));
+
+        frame->regs.rdi = (uint64_t)(uintptr_t)&task->context;
+
+        frame->rip = task->process->user_rip;
+        frame->rsp = task->process->user_rsp;
+        frame->rflags = task->process->user_rflags;
+
+        frame->cs = USER_CODE_SELECTOR | 3;
+        frame->ss = USER_DATA_SELECTOR | 3;
+
+        kprintf("[USER] RIP = %p\n", (void *)frame->rip);
+        kprintf("[USER] RSP = %p\n", (void *)frame->rsp);
+        kprintf("[USER] CS  = 0x%llx\n", (unsigned long long)frame->cs);
+        kprintf("[USER] SS  = 0x%llx\n", (unsigned long long)frame->ss);
+
+        return frame;
+
+    }
+    else
+    {
+        kprintf("[SCHED] Building KERNEL interrupt frame\n");
+    }
+
+    kernel_interrupt_frame_t *frame =
+        (kernel_interrupt_frame_t *)((uint8_t *)(uintptr_t)task->context.rsp -
+                                     sizeof(kernel_interrupt_frame_t));
 
     k_memset(frame, 0, sizeof(*frame));
 
@@ -446,6 +511,9 @@ static void *scheduler_build_context_interrupt_rsp(task_t *task)
     frame->rip = (uint64_t)(uintptr_t)context_resume_from_interrupt;
     frame->cs = KERNEL_CODE_SELECTOR;
     frame->rflags = KERNEL_TRAMPOLINE_RFLAGS;
+
+    frame->rsp = 0;
+    frame->ss = 0;
 
     return frame;
 }
@@ -520,10 +588,33 @@ void *scheduler_get_next_interrupt_rsp(void)
         return NULL;
     }
 
-    void *next_interrupt_rsp =
+    void *next_interrupt_rsp = NULL;
+
+    if (next->process != NULL &&
+        next->process->is_user_process)
+    {
+        if (!next->process->user_started)
+        {
+            kprintf("[SCHED] First USER execution\n");
+
+            next->process->user_started = true;
+
+            next_interrupt_rsp = scheduler_build_context_interrupt_rsp(next);
+        }
+        else
+        {
+            kprintf("[SCHED] Resume USER process\n");
+
+            next_interrupt_rsp = next->interrupt_rsp;
+        }
+    }
+    else
+    {
+        next_interrupt_rsp =
         task_resume_uses_interrupt_frame(next)
             ? next->interrupt_rsp
             : scheduler_build_context_interrupt_rsp(next);
+    }
 
     if (next_interrupt_rsp == NULL)
     {

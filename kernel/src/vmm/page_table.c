@@ -4,14 +4,6 @@
 #include "../lib/memory.h"
 #include "../stdio/printf.h"
 
-
-enum
-{
-    PAGE_TABLE_ADDRESS_MASK = 0x000FFFFFFFFFF000ULL,
-    PAGE_2MIB_SIZE = 1ULL << 21,
-    PAGE_1GIB_SIZE = 1ULL << 30,
-};
-
 typedef enum
 {
     PAGE_WALK_LEVEL_NONE = 0,
@@ -563,6 +555,27 @@ bool page_table_map_user(
     {
         return false;
     }
+
+    page_table_t *pdpt = (page_table_t *)page_table_physical_to_virtual(
+        pml4->entries[PML4_INDEX(virtual_address)]&
+        PAGE_TABLE_ADDRESS_MASK
+    );
+
+    pml4->entries[PML4_INDEX(virtual_address)] |= PAGE_USER;
+
+    page_table_t *pd = (page_table_t *)page_table_physical_to_virtual(
+        pdpt->entries[PDPT_INDEX(virtual_address)]&
+        PAGE_TABLE_ADDRESS_MASK
+    );
+
+    pdpt->entries[PDPT_INDEX(virtual_address)] |= PAGE_USER;
+
+    page_table_t *pt = (page_table_t *)page_table_physical_to_virtual(
+        pd->entries[PD_INDEX(virtual_address)]&
+        PAGE_TABLE_ADDRESS_MASK
+    );
+
+    pd->entries[PD_INDEX(virtual_address)] |= PAGE_USER;
 
     *entry = physical_address | flags;
 
