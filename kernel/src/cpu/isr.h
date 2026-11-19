@@ -10,5 +10,6 @@
 void isr_dispatch(interrupt_context_t *context);
 
 extern void (*const isr_table[ISR_VECTOR_COUNT])(void);
+extern void isr128(void);
 
 #endif

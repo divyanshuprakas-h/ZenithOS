@@ -54,6 +54,9 @@ void idt_init(void)
         idt_set_gate(vector, isr_table[vector], 0x08, 0x8E);
     }
 
+    /* Vector 0x80 (128) - System Call gate, DPL 3 */
+    idt_set_gate(0x80, isr128, 0x08, 0xEE);
+
     idt_load(&idtr);
     kprintf("IDT Loaded Successfully!\n");
 }
