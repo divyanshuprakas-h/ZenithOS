@@ -8,14 +8,20 @@
 #include "../mm/heap.h"
 #include "../lib/memory.h"
 
+
 #include <stddef.h>
 
-int process_exec_file(process_t *process, const char *path)
+int process_exec_file(const char *path, process_t **process)
 {
     if (process == NULL || path == NULL)
         return KERNEL_EINVAL;
 
     kprintf("[EXEC] STEP 1\n");
+
+    *process = process_create_empty("init");
+
+    if (*process == NULL)
+        return KERNEL_ENOMEM;
 
     file_t *file;
 
@@ -58,7 +64,7 @@ int process_exec_file(process_t *process, const char *path)
     kprintf("[EXEC] Read %d bytes\n", bytes);
     kprintf("[EXEC] STEP 4 bytes=%d\n", bytes);
 
-    int status = process_exec(process, buffer);
+    int status = process_exec(*process, buffer);
 
     if (status != KERNEL_SUCCESS)
     {
@@ -69,6 +75,9 @@ int process_exec_file(process_t *process, const char *path)
 
         return status;
     }
+
+    kprintf("[EXEC] process_exec OK\n");
+    kprintf("[EXEC] process RIP = 0x%llx\n", (unsigned long long)(*process)->user_rip);
 
     kprintf("[EXEC] Image loaded successfully\n");
     kprintf("[EXEC] STEP 5 status=%d\n", status);
