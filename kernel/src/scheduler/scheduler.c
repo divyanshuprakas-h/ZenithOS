@@ -144,10 +144,8 @@ static task_t *scheduler_switch_to(task_t *next)
     }
 
     if (next->process != NULL){
-        
         page_table_switch(next->process->page_table_physical);
-        kprintf("[SCHED] Switching to PID=%llu CR3=%p\n", (unsigned long long)next->process->pid, (void *)next->process->page_table_physical);
-        
+        // kprintf("[SCHED] Switching to PID=%llu CR3=%p\n", (unsigned long long)next->process->pid, (void *)next->process->page_table_physical);
     };
 
     if (next != NULL)
@@ -250,10 +248,12 @@ task_t *scheduler_schedule(void)
 
     scheduler_trace_task("scheduler_schedule selected", next);
 
+    /*
     if (next != NULL)
     {
         kprintf("[SCHED] schedule -> task=%llu state=%d\n", (unsigned long long)next->id, next->state);
     }
+    */
     return scheduler_switch_to(next);
 }
 

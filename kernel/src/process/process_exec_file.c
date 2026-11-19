@@ -37,7 +37,7 @@ int process_exec_file(const char *path, process_t **process)
     kprintf("[EXEC] Opened %s\n", path);
     kprintf("[EXEC] STEP 3\n");
 
-    #define EXEC_BUFFER_SIZE 65536
+    #define EXEC_BUFFER_SIZE 32768
 
     void *buffer = kmalloc(EXEC_BUFFER_SIZE);
 
