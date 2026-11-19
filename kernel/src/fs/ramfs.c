@@ -277,15 +277,15 @@ int ramfs_read(file_t *file, void *buffer, uint64_t size)
     if (file->node->type != VNODE_FILE)
         return KERNEL_ENOTSUP;
 
-    if (node->data == NULL)
-        return KERNEL_SUCCESS;
+    if (node->data == NULL || file->position >= node->vnode.size)
+        return 0;
 
     uint64_t bytes = size;
 
-    if (bytes > node->vnode.size)
-        bytes = node->vnode.size;
+    if (file->position + bytes > node->vnode.size)
+        bytes = node->vnode.size - file->position;
 
-    k_memcpy(buffer, node->data, bytes);
+    k_memcpy(buffer, (const char *)node->data + file->position, bytes);
 
     file->position += bytes;
 
