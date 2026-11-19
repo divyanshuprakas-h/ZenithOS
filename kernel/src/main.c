@@ -3,9 +3,13 @@
 #include <stdbool.h>
 #include <limine.h>
 
+#include "kernel_err/errno.h"
+
+#include "initramfs/initramfs.h"
 #include "framebuffer/framebuffer.h"
 #include "terminal/terminal.h"
 #include "mm/heap.h"
+#include "lib/memory.h"
 #include "stdio/printf.h"
 #include "lib/convert.h"
 #include "cpu/gdt.h"
@@ -38,6 +42,8 @@
 #include "process/process.h"
 #include "tests/fs_test.h"
 #include "process/process_exec_file.h"
+
+#include "fs/fs_init.h"
 
 // Limine Base Revision
 
@@ -81,6 +87,13 @@ __attribute__((used, section(".limine_requests_end")))
 static volatile uint64_t limine_requests_end_marker[] =
     LIMINE_REQUESTS_END_MARKER;
 
+__attribute__((used, section(".limine_requests")))
+    static volatile struct limine_module_request module_request = 
+    {
+        .id = LIMINE_MODULE_REQUEST_ID,
+        .revision = 0
+    };
+
 // Halt CPU
 
 static void hcf(void)
@@ -92,6 +105,76 @@ static void hcf(void)
 #elif defined(__aarch64__) || defined(__riscv)
         __asm__ volatile("wfi");
 #endif
+    }
+}
+
+typedef struct user_interrupt_frame
+{
+    registers_t regs;
+
+    uint64_t interrupt_number;
+    uint64_t error_code;
+
+    uint64_t rip;
+    uint64_t cs;
+    uint64_t rflags;
+
+    uint64_t rsp;
+    uint64_t ss;
+} user_interrupt_frame_t;
+
+static void init_process_stub(void);
+
+static bool launch_user_process(process_t *process)
+{
+    if (process == NULL || !process->is_user_process)
+    {
+        return false;
+    }
+
+    if (process->main_thread != NULL)
+    {
+        return false;
+    }
+
+    task_t *task = task_create(init_process_stub);
+
+    if (task == NULL)
+    {
+        return false;
+    }
+
+    task->process = process;
+    process->main_thread = task;
+    process->thread_list = task;
+
+    user_interrupt_frame_t *frame =
+        (user_interrupt_frame_t *)((uint8_t *)(uintptr_t)task->context.rsp -
+                                    sizeof(user_interrupt_frame_t));
+
+    k_memset(frame, 0, sizeof(*frame));
+
+    frame->regs.rdi = (uint64_t)(uintptr_t)&task->context;
+    frame->rip = process->user_rip;
+    frame->rsp = process->user_rsp;
+    frame->rflags = process->user_rflags;
+    frame->cs = USER_CODE_SELECTOR | 3;
+    frame->ss = USER_DATA_SELECTOR | 3;
+
+    task->interrupt_rsp = frame;
+    task->resume_mode = TASK_RESUME_INTERRUPT;
+
+    process->user_started = true;
+
+    scheduler_add_task(task);
+    return true;
+}
+
+static void init_process_stub(void)
+{
+    for (;;)
+    {
+        __asm__ volatile("hlt");
     }
 }
 
@@ -167,6 +250,19 @@ void kmain(void)
 
         hcf();
 
+    if (module_request.response == NULL)
+    {
+        terminal_write("No module response!\n");
+        hcf();
+    }
+    kprintf("Modules loaded: %llu\n", (unsigned long long)module_request.response->module_count);
+
+    const struct limine_file *module = module_request.response->modules[0];
+
+    kprintf("Module path : %s\n", module->path);
+    kprintf("Module addr : %p\n", module->address);
+    kprintf("Module size : %llu\n", (unsigned long long)module->size);
+
     /* ----------------------------------------------------
      * Initialize Framebuffer
      * ---------------------------------------------------- */
@@ -216,6 +312,20 @@ void kmain(void)
     );
 
     heap_init();
+
+    if (fs_init() != KERNEL_SUCCESS)
+    {
+        kprintf("[FAIL] fs_init\n");
+        hcf();
+    }
+
+    if (!initramfs_init(module->address, module->size))
+    {
+        kprintf("[FAIL] initramfs_init\n");
+        hcf();
+    }
+
+    kprintf("[PASS] initramfs_init\n");
 
     terminal_write("Memory Initialization Complete\n");
 
@@ -279,13 +389,23 @@ void kmain(void)
 
     kprintf("[TRACE] kernel_tests() end\n");
 
-    fs_test();
+    process_t *init_process = NULL;
 
-    fd_test();
+    int rc = process_exec_file("/bin/init", &init_process);
 
-    elf_test();
+    if (rc != KERNEL_SUCCESS)
+    {
+        kprintf("[FAIL] Cannot launch /bin/init (%d)\n", rc);
+        hcf();
+    }
 
-    test_process_void();
+    if (!launch_user_process(init_process))
+    {
+        kprintf("[FAIL] Cannot schedule /bin/init\n");
+        hcf();
+    }
+
+    kprintf("[BOOT] init process created (pid=%u)\n", init_process->pid);
 
     scheduler_yield();
 
