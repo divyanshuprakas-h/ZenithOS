@@ -2,6 +2,7 @@
 
 #include "exceptions.h"
 #include "irq.h"
+#include "syscall.h"
 
 extern void isr0(void);
 extern void isr1(void);
@@ -109,6 +110,12 @@ void isr_dispatch(interrupt_context_t *context)
     if (context->interrupt_number < 32)
     {
         exception_dispatch(context);
+        return;
+    }
+
+    if (context->interrupt_number == 128)
+    {
+        syscall_dispatch(context);
         return;
     }
 
