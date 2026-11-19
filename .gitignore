@@ -2,3 +2,8 @@
 /edk2-ovmf-bins
 *.iso
 *.hdd
+.DS_Store
+initramfs.tar
+initramfs/
+kernel.log
+a.out

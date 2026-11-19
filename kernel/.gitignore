@@ -6,3 +6,6 @@
 /limine-protocol
 /bin-*
 /obj-*
+/src/user/*.o
+/src/user/*/*.o
+/src/user/init.elf
