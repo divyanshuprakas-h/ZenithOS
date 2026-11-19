@@ -657,6 +657,14 @@ void scheduler_commit_pending_task(void)
         return;
     }
 
+    if (pending_task->process != NULL)
+    {
+        page_table_switch(pending_task->process->page_table_physical);
+    }
+
+    uint64_t rsp0 = (uint64_t)pending_task->kernel_stack + pending_task->kernel_stack_size;
+    tss_set_rsp0(rsp0);
+
     current_task = pending_task;
     preemption_ticks = 0;
     
