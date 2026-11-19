@@ -3,14 +3,21 @@
 #include "terminal.h"
 #include "../font/font.h"
 #include "terminal_buffer.h"
+#include "../hal/io.h"
+#include "../cpu/interrupts.h"
 
-static size_t cursor_row;
-static size_t cursor_col;
+static size_t cursor_row = 0;
+static size_t cursor_col = 0;
 
-#define INPUT_BUFFER_SIZE 256
+#define LINE_BUFFER_SIZE  256
+#define STDIN_RING_SIZE   1024
 
-static char input_buffer[INPUT_BUFFER_SIZE];
-static size_t input_length = 0;
+static char line_buffer[LINE_BUFFER_SIZE];
+static size_t line_len = 0;
+
+static char stdin_ring[STDIN_RING_SIZE];
+static size_t stdin_head = 0;
+static size_t stdin_tail = 0;
 
 static terminal_cell_t terminal_buffer[TERM_ROWS][TERM_COLS];
 
@@ -38,15 +45,7 @@ static void terminal_scroll(void)
 
     cursor_row = TERM_ROWS - 1;
     cursor_col = 0;
-
-//     framebuffer_clear(0xFF0000);
-//     for (;;)
-//     {
-//         __asm__ volatile("hlt");
-//     }
 }
-
-void terminal_render(void);
 
 void terminal_set_origin(int x, int y)
 {
@@ -59,6 +58,9 @@ void terminal_init(void)
     cursor_row = 0;
     cursor_col = 0;
     terminal_color = 0xFFFFFF;
+    line_len = 0;
+    stdin_head = 0;
+    stdin_tail = 0;
 
     for (size_t r = 0; r < TERM_ROWS; r++)
     {
@@ -71,8 +73,59 @@ void terminal_init(void)
     }
 }
 
+void terminal_clear(void)
+{
+    cursor_row = 0;
+    cursor_col = 0;
+
+    for (size_t r = 0; r < TERM_ROWS; r++)
+    {
+        for (size_t c = 0; c < TERM_COLS; c++)
+        {
+            terminal_buffer[r][c].character = ' ';
+            terminal_buffer[r][c].foreground = 0xFFFFFF;
+            terminal_buffer[r][c].background = 0x000000;
+        }
+    }
+
+    terminal_render();
+}
+
 void terminal_putchar(char c)
 {
+    if (c == '\f')
+    {
+        terminal_clear();
+        return;
+    }
+
+    if (c == '\r')
+    {
+        cursor_col = 0;
+        return;
+    }
+
+    if (c == '\b')
+    {
+        terminal_backspace();
+        return;
+    }
+
+    if (c == '\t')
+    {
+        cursor_col = (cursor_col + 4) & ~3;
+        if (cursor_col >= TERM_COLS)
+        {
+            cursor_col = 0;
+            cursor_row++;
+            if (cursor_row >= TERM_ROWS)
+            {
+                terminal_scroll();
+            }
+        }
+        return;
+    }
+
     if (c == '\n')
     {
         cursor_col = 0;
@@ -89,7 +142,6 @@ void terminal_putchar(char c)
     if (cursor_row >= TERM_ROWS)
     {
         terminal_scroll();
-        return;
     }
 
     terminal_buffer[cursor_row][cursor_col].character = c;
@@ -108,8 +160,6 @@ void terminal_putchar(char c)
             terminal_scroll();
         }
     }
-
-    // terminal_render();
 }
 
 void terminal_backspace(void)
@@ -142,7 +192,6 @@ void terminal_write(const char *str)
     terminal_render();
 }
 
-
 void terminal_set_color(uint32_t color)
 {
     terminal_color = color;
@@ -158,9 +207,9 @@ void terminal_render(void)
         0x000000
     );
 
-    for (size_t row = 0 ; row < TERM_ROWS; row ++)
+    for (size_t row = 0; row < TERM_ROWS; row++)
     {
-        for (size_t col = 0 ; col < TERM_COLS; col ++)
+        for (size_t col = 0; col < TERM_COLS; col++)
         {
             terminal_cell_t *cell = &terminal_buffer[row][col];
 
@@ -177,20 +226,90 @@ void terminal_render(void)
     }
 }
 
+bool terminal_stdin_has_data(void)
+{
+    return stdin_head != stdin_tail;
+}
+
+int terminal_stdin_read(char *buf, size_t max_len)
+{
+    if (buf == NULL || max_len == 0 || stdin_head == stdin_tail)
+    {
+        return 0;
+    }
+
+    bool irq_was_enabled = interrupt_save();
+
+    size_t count = 0;
+    while (count < max_len && stdin_head != stdin_tail)
+    {
+        buf[count++] = stdin_ring[stdin_head];
+        stdin_head = (stdin_head + 1) % STDIN_RING_SIZE;
+    }
+
+    interrupt_restore(irq_was_enabled);
+    return (int)count;
+}
+
 void terminal_handle_key(char c)
 {
-    if (input_length >= INPUT_BUFFER_SIZE - 1)
+    if (c == '\b')
+    {
+        if (line_len > 0)
+        {
+            line_len--;
+            terminal_backspace();
+            outb(0xE9, '\b');
+            outb(0xE9, ' ');
+            outb(0xE9, '\b');
+        }
         return;
+    }
 
-    input_buffer[input_length++] = c;
-    input_buffer[input_length] = '\0';
+    if (c == '\n')
+    {
+        terminal_putchar('\n');
+        outb(0xE9, '\n');
+        terminal_render();
 
-    terminal_putchar(c);
-    terminal_render();
+        bool irq_was_enabled = interrupt_save();
 
+        for (size_t i = 0; i < line_len; i++)
+        {
+            size_t next = (stdin_tail + 1) % STDIN_RING_SIZE;
+            if (next != stdin_head)
+            {
+                stdin_ring[stdin_tail] = line_buffer[i];
+                stdin_tail = next;
+            }
+        }
+
+        size_t next = (stdin_tail + 1) % STDIN_RING_SIZE;
+        if (next != stdin_head)
+        {
+            stdin_ring[stdin_tail] = '\n';
+            stdin_tail = next;
+        }
+
+        line_len = 0;
+        interrupt_restore(irq_was_enabled);
+        return;
+    }
+
+    if ((c >= ' ' && c <= '~') || c == '\t')
+    {
+        if (line_len + 1 < LINE_BUFFER_SIZE)
+        {
+            line_buffer[line_len++] = c;
+            terminal_putchar(c);
+            outb(0xE9, (uint8_t)c);
+            terminal_render();
+        }
+        return;
+    }
 }
 
 const char *terminal_get_input(void)
 {
-    return input_buffer;
+    return line_buffer;
 }
