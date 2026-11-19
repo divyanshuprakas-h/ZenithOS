@@ -99,6 +99,7 @@ context_switch_to_interrupt:
     mov rsp, rsi
     POP_INTERRUPT_REGS
 
+    ; Skip interrupt_number and error_code before iretq.
     add rsp, 16
     iretq
 
@@ -130,6 +131,7 @@ context_start:
     add rsp, 8
 
     ; Jump directly to task entry
-    mov rax, [rdi + TASK_ENTRY]
+    mov rax, [rdi + TASK_ENTRY] 
 
     jmp rax
+
