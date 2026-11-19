@@ -5,6 +5,7 @@
 #include "../scheduler/scheduler.h"
 #include "../kernel_err/errno.h"
 #include "../stdio/printf.h"
+#include "../mm/pmm.h"
 
 void syscall_dispatch(interrupt_context_t *context)
 {
@@ -46,6 +47,22 @@ void syscall_dispatch(interrupt_context_t *context)
         case SYS_YIELD:
             scheduler_yield();
             ret = 0;
+            break;
+
+        case SYS_SYSINFO:
+            if (arg1 == 0)
+            {
+                ret = -KERNEL_EINVAL;
+            }
+            else
+            {
+                sysinfo_t *info = (sysinfo_t *)arg1;
+                info->total_pages = pmm_get_total_pages();
+                info->free_pages = pmm_get_free_pages();
+                info->used_pages = pmm_get_used_pages();
+                info->page_size = 4096;
+                ret = 0;
+            }
             break;
 
         default:
