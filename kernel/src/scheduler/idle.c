@@ -5,6 +5,8 @@ void idle_task(void)
     while (1)
     {
         scheduler_yield();
-        __asm__ volatile("hlt");
+        __asm__ volatile(
+            "sti\n"
+            "hlt\n");
     }
 }

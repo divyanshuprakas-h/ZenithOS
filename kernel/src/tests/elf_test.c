@@ -98,9 +98,9 @@ void elf_test(void)
     kprintf("Image Base = 0x%llx\n", (unsigned long long)image.image_base);
     kprintf("Entry      = 0x%llx\n", (unsigned long long)image.entry);
 
-    process_t *proc = process_create("exec_test", process_test);
+    process_t *proc = NULL;
 
-    int ret = process_exec_file(proc, "/bin/init");
+    int ret = process_exec_file("/bin/init", &proc);
 
     if (ret == KERNEL_SUCCESS)
     {

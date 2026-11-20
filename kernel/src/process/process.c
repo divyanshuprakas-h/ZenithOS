@@ -21,16 +21,8 @@ static uint64_t process_allocate_pid(void)
     return next_pid++;
 }
 
-process_t *process_create(
-    const char *name,
-    void(*entry)(void)
-)
+process_t *process_create_empty(const char *name)
 {
-    if (entry == NULL)
-    {
-        return NULL;
-    }
-
     process_t *process = kmalloc(sizeof(process_t));
 
     if (process == NULL)
@@ -57,6 +49,7 @@ process_t *process_create(
 
     if (process->page_table == NULL)
     {
+        kfree(process);
         return NULL;
     }
 
@@ -91,13 +84,32 @@ process_t *process_create(
     process_list = process;
 
     k_memset(process->name, 0, sizeof(process->name));
-    k_strcpy(process->name, name);
+    if (name != NULL)
+        k_strcpy(process->name, name);
+
+    return process;
+}
+
+process_t *process_create(
+    const char *name,
+    void(*entry)(void)
+)
+{
+    if (entry == NULL)
+    {
+        return NULL;
+    }
+
+    process_t *process = process_create_empty(name);
+
+    if (process == NULL)
+        return NULL;
 
     task_t *task = task_create(entry);
 
     if (task == NULL)
     {
-        kfree(process);
+        process_destroy(process);
         return NULL;
     }
 

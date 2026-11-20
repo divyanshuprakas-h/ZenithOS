@@ -157,12 +157,18 @@ kernel/.deps-obtained:
 
 .PHONY: kernel
 kernel: kernel/.deps-obtained
-	$(MAKE) -C kernel
+	$(MAKE) -C kernel/src/user
+	mkdir -p initramfs/bin
+	cp kernel/src/user/init.elf initramfs/bin/init
+	COPYFILE_DISABLE=1 tar --format=ustar -cf initramfs.tar -C initramfs .
+	$(MAKE) -C kernel TOOLCHAIN=llvm LD=/opt/homebrew/bin/ld.lld
 
 $(IMAGE_NAME).iso: limine-binary/limine kernel
 	rm -rf iso_root
 	mkdir -p iso_root/boot
 	cp -v kernel/bin-$(ARCH)/kernel iso_root/boot/
+	cp -v initramfs.tar iso_root/boot
+
 	mkdir -p iso_root/boot/limine
 	cp -v limine.conf iso_root/boot/limine/
 	mkdir -p iso_root/EFI/BOOT
@@ -236,8 +242,9 @@ endif
 
 .PHONY: clean
 clean:
+	$(MAKE) -C kernel/src/user clean
 	$(MAKE) -C kernel clean
-	rm -rf iso_root $(IMAGE_NAME).iso $(IMAGE_NAME).hdd
+	rm -rf iso_root initramfs initramfs.tar $(IMAGE_NAME).iso $(IMAGE_NAME).hdd
 
 .PHONY: distclean
 distclean:

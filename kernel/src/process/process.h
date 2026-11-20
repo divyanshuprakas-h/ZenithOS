@@ -67,6 +67,8 @@ process_t *process_create(
     void(*entry)(void)
 );
 
+process_t *process_create_empty(const char *name);
+
 process_t *process_lookup(uint64_t pid);
 
 process_t *process_current(void);
