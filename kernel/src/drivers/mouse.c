@@ -5,8 +5,9 @@
 #include "../hal/ports.h"
 #include "../hal/pic.h"
 #include "../framebuffer/framebuffer.h"
-// #include "../gui/desktop.h"
 #include "../gui/gui_state.h"
+#include "../gui/cursor.h"
+#include "../gui/window_manager.h"
 
 MouseState mouse_state = 
 {
@@ -98,12 +99,11 @@ void mouse_init(void)
 
 void mouse_handler(void)
 {
-
     uint8_t status = inb(KEYBOARD_STATUS);
 
     if ((status & 0x21) != 0x21)
         return;
-    
+
     mouse_packet[packet_index++] = inb(KEYBOARD_DATA);
 
     if (packet_index < 3)
@@ -111,9 +111,12 @@ void mouse_handler(void)
 
     packet_index = 0;
 
-    mouse_state.left = mouse_packet[0] & 0x01;
-    mouse_state.right = mouse_packet[0] & 0x02;
-    mouse_state.middle = mouse_packet[0] & 0x04;
+    bool prev_left = mouse_state.left;
+    bool new_left = (mouse_packet[0] & 0x01) != 0;
+
+    mouse_state.left = new_left;
+    mouse_state.right = (mouse_packet[0] & 0x02) != 0;
+    mouse_state.middle = (mouse_packet[0] & 0x04) != 0;
 
     if (!(mouse_packet[0] & 0x08))
     {
@@ -132,17 +135,28 @@ void mouse_handler(void)
     if (mouse_state.y < 0)
         mouse_state.y = 0;
 
-    if (mouse_state.x >= framebuffer_width())
-        mouse_state.x = framebuffer_width() - 1;
+    if (mouse_state.x >= (int)framebuffer_width())
+        mouse_state.x = (int)framebuffer_width() - 1;
 
-    if (mouse_state.y >= framebuffer_height())
-        mouse_state.y = framebuffer_height() - 1;
+    if (mouse_state.y >= (int)framebuffer_height())
+        mouse_state.y = (int)framebuffer_height() - 1;
 
-    static uint8_t skip = 0;
-
-    if (++skip >= 3)
+    if (new_left && !prev_left)
     {
-        skip = 0;
-        gui_needs_redraw = true;
+        window_manager_mouse_down(mouse_state.x, mouse_state.y);
+    }
+    else if (!new_left && prev_left)
+    {
+        window_manager_mouse_up();
+    }
+
+    if (dx != 0 || dy != 0)
+    {
+        window_manager_mouse_move(mouse_state.x, mouse_state.y);
+    }
+
+    if (!gui_needs_redraw)
+    {
+        cursor_move(mouse_state.x, mouse_state.y);
     }
 }
