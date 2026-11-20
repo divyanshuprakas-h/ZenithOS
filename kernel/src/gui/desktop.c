@@ -92,6 +92,8 @@ void desktop_init(void)
 
 void desktop_draw(void)
 {
+    cursor_invalidate();
+
     desktop_draw_background();
 
     window_manager_draw();
