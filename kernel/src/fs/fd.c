@@ -29,7 +29,7 @@ int fd_allocate(fd_table_t *table, file_t *file)
     if (table == NULL || file == NULL)
         return KERNEL_EINVAL;
 
-    for (int fd = 0; fd < FD_MAX; fd++)
+    for (int fd = 3; fd < FD_MAX; fd++)
     {
         if (table->files[fd] == NULL)
         {
