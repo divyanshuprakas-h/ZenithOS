@@ -105,10 +105,10 @@ static void cmd_echo(const char *arg)
 int main(void)
 {
     println("");
-    println("==================================================");
-    println("          ZenithOS Interactive Shell (Ring 3)     ");
-    println("       Type 'help' to see available commands.     ");
-    println("==================================================");
+    println("==============================================");
+    println("     ZenithOS Interactive Shell (Ring 3)      ");
+    println("    Type 'help' to see available commands.    ");
+    println("==============================================");
     println("");
 
     char cmd[128];
