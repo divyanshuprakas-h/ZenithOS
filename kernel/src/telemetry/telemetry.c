@@ -33,7 +33,7 @@ static bool parse_int32(const char *str, int32_t *out_val, int32_t min_v, int32_
         if (*p < '0' || *p > '9')
             return false;
         val = val * 10 + (*p - '0');
-        if (val > 1000000000LL) // Sanity limit
+        if (val > 1000000000LL)
             return false;
         p++;
     }
@@ -124,32 +124,45 @@ bool telemetry_parse_line(const char *line, size_t len)
     k_memcpy(buf, line, copy_len);
     buf[copy_len] = '\0';
 
-    // Strip trailing \r or \n
+    // Strip trailing \r, \n, or spaces
     while (copy_len > 0 && (buf[copy_len - 1] == '\r' || buf[copy_len - 1] == '\n' || buf[copy_len - 1] == ' '))
     {
         buf[--copy_len] = '\0';
     }
 
     // Tokenize fields: #Z1, <seq>, <roll>, <pitch>, <yaw>, <voltage_mv>, <temp_c>, <status>
-    char *tokens[8];
+    // Must contain exactly 8 non-empty tokens with no extra trailing fields
+    char *tokens[9];
     int token_count = 0;
     char *p = buf;
 
-    while (*p != '\0' && token_count < 8)
+    while (*p != '\0')
     {
+        if (token_count >= 8)
+        {
+            s_stats.invalid_packets++;
+            return false;
+        }
+
         tokens[token_count++] = p;
         while (*p != '\0' && *p != ',')
         {
             p++;
         }
+
         if (*p == ',')
         {
             *p = '\0';
             p++;
+            if (*p == '\0')
+            {
+                // Trailing comma indicates missing/empty trailing token
+                s_stats.invalid_packets++;
+                return false;
+            }
         }
     }
 
-    // Must have exactly 8 tokens (header + 7 fields)
     if (token_count != 8)
     {
         s_stats.invalid_packets++;
@@ -203,17 +216,50 @@ bool telemetry_parse_line(const char *line, size_t len)
         return false;
     }
 
-    // Sequence tracking and dropped packet detection
+    // Status validation: bounded, non-empty, alphanumeric and underscore/hyphen only
+    const char *status_in = tokens[7];
+    size_t s_len = 0;
+    while (status_in[s_len] != '\0')
+    {
+        char sc = status_in[s_len];
+        bool safe_char = (sc >= 'A' && sc <= 'Z') ||
+                         (sc >= 'a' && sc <= 'z') ||
+                         (sc >= '0' && sc <= '9') ||
+                         (sc == '_') || (sc == '-');
+        if (!safe_char)
+        {
+            s_stats.invalid_packets++;
+            return false;
+        }
+        s_len++;
+        if (s_len >= sizeof(s_current.status))
+        {
+            s_stats.invalid_packets++;
+            return false;
+        }
+    }
+    if (s_len == 0)
+    {
+        s_stats.invalid_packets++;
+        return false;
+    }
+
+    // Sequence tracking and rollover handling
     if (s_stats.has_received_first)
     {
-        if (seq > s_stats.last_seq + 1)
+        uint32_t delta = seq - s_stats.last_seq;
+        if (delta == 1)
         {
-            uint32_t gap = seq - s_stats.last_seq - 1;
+            // Consecutive packet (handles 0xFFFFFFFF -> 0 cleanly)
+        }
+        else if (delta > 1 && delta < 0x80000000U)
+        {
+            uint32_t gap = delta - 1;
             s_stats.dropped_packets += gap;
         }
-        else if (seq <= s_stats.last_seq)
+        else
         {
-            // Out-of-order or duplicate packet
+            // Duplicate (delta == 0) or old/out-of-order packet
             s_stats.dropped_packets++;
         }
     }
@@ -229,13 +275,9 @@ bool telemetry_parse_line(const char *line, size_t len)
     s_current.voltage_mv = volt_mv;
     s_current.temp_c = temp_c;
 
-    // Copy status string safely
-    const char *status_in = tokens[7];
-    size_t s_len = 0;
-    while (status_in[s_len] != '\0' && s_len < sizeof(s_current.status) - 1)
+    for (size_t i = 0; i < s_len; i++)
     {
-        s_current.status[s_len] = status_in[s_len];
-        s_len++;
+        s_current.status[i] = status_in[i];
     }
     s_current.status[s_len] = '\0';
     s_current.valid = true;
