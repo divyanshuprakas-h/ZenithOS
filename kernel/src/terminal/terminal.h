@@ -19,6 +19,9 @@ void terminal_set_color(uint32_t color);
 
 void terminal_set_origin(int x, int y);
 
+void terminal_set_visible(bool visible);
+bool terminal_is_visible(void);
+
 void terminal_handle_key(char c);
 
 void terminal_render(void);

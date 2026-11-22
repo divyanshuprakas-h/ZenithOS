@@ -29,6 +29,7 @@
 
 #include "gui/gui.h"
 #include "apps/terminal_app.h"
+#include "apps/sysmon_app.h"
 #include "gui/desktop.h"
 #include "gui/gui_state.h"
 
@@ -391,6 +392,7 @@ void kmain(void)
      * ---------------------------------------------------- */
     gui_init();
     terminal_app_init();
+    sysmon_app_init();
     desktop_init();
     desktop_draw();
 
@@ -418,8 +420,17 @@ void kmain(void)
     /* ----------------------------------------------------
      * Desktop Compositor Loop (Task 0)
      * ---------------------------------------------------- */
+    uint64_t last_stats_tick = pit_ticks();
+
     while (1)
     {
+        uint64_t now = pit_ticks();
+        if (now - last_stats_tick >= 100)
+        {
+            last_stats_tick = now;
+            gui_needs_redraw = true;
+        }
+
         if (gui_needs_redraw)
         {
             gui_needs_redraw = false;
