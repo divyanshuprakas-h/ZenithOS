@@ -17,6 +17,17 @@
 #define SYS_MKDIR   9
 #define SYS_UNLINK  10
 #define SYS_SET_THEME 11
+#define SYS_SERIAL_STATUS 12
+
+typedef struct {
+    uint32_t port;
+    uint32_t baud_rate;
+    bool is_online;
+    uint64_t bytes_rx;
+    uint64_t bytes_tx;
+    uint64_t rx_overruns;
+    uint32_t rx_buffered;
+} serial_status_t;
 
 typedef struct
 {
@@ -51,6 +62,7 @@ int mkdir(const char *path);
 int unlink(const char *path);
 int set_theme(int theme_id);
 int get_theme(void);
+int serial_status(serial_status_t *status);
 
 size_t strlen(const char *s);
 int strcmp(const char *s1, const char *s2);

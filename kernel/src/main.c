@@ -20,6 +20,7 @@
 #include "hal/pit.h"
 #include "drivers/keyboard.h"
 #include "drivers/mouse.h"
+#include "drivers/serial.h"
 #include "mm/memory_map.h"
 #include "mm/pmm.h"
 #include "mm/heap.h"
@@ -356,6 +357,8 @@ void kmain(void)
 
     kprintf("[PASS] initramfs_init\n");
 
+    serial_devfs_init();
+
     terminal_write("Memory Initialization Complete\n");
 
 
@@ -385,6 +388,7 @@ void kmain(void)
 
     keyboard_init();
     mouse_init();
+    serial_init();
 
     terminal_write("Driver Initialization Complete\n");
 

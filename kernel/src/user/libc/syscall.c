@@ -127,6 +127,11 @@ int get_theme(void)
     return (int)syscall1(SYS_SET_THEME, -1L);
 }
 
+int serial_status(serial_status_t *status)
+{
+    return (int)syscall1(SYS_SERIAL_STATUS, (long)status);
+}
+
 size_t strlen(const char *s)
 {
     size_t len = 0;

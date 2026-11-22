@@ -8,6 +8,7 @@
 #include "../mm/pmm.h"
 #include "../gui/gui_state.h"
 #include "user_access.h"
+#include "../drivers/serial.h"
 
 void syscall_dispatch(interrupt_context_t *context)
 {
@@ -143,6 +144,20 @@ void syscall_dispatch(interrupt_context_t *context)
             else
             {
                 gui_set_theme((int)arg1);
+                ret = 0;
+            }
+            break;
+
+        case SYS_SERIAL_STATUS:
+            if (!user_ptr_valid((void *)arg1, sizeof(serial_status_t)))
+            {
+                ret = -KERNEL_EINVAL;
+            }
+            else
+            {
+                serial_status_t status;
+                serial_get_status(&status);
+                copy_to_user((void *)arg1, &status, sizeof(serial_status_t));
                 ret = 0;
             }
             break;

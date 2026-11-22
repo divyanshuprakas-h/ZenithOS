@@ -361,6 +361,7 @@ static void cmd_help(void)
     println("  env               - List environment variables");
     println("  export KEY=VALUE  - Set environment variable (e.g. PS1)");
     println("  theme [name]      - Get or switch desktop theme (matrix, nord, amber, etc.)");
+    println("  serial [cmd]      - Inspect COM1 / /dev/ttyS0, send or read data");
     println("  echo <text>       - Print text ($VAR supported)");
     println("  history           - Show command history");
     println("  free / mem        - Display memory usage");
@@ -459,6 +460,113 @@ static void cmd_theme(const char *arg)
         print(arg);
         println("'. Type 'theme list' for options.");
     }
+}
+
+static void cmd_serial(const char *arg)
+{
+    while (*arg == ' ') arg++;
+
+    if (*arg == '\0' || strcmp(arg, "status") == 0)
+    {
+        serial_status_t st;
+        int rc = serial_status(&st);
+        if (rc != 0)
+        {
+            println("serial: failed to query COM1 status");
+            return;
+        }
+
+        println("==========================================");
+        println("  ZenithOS Serial Device: /dev/ttyS0");
+        println("==========================================");
+        print("  Hardware Port : COM1 (0x3F8)\n");
+        print("  Configuration : ");
+        print_num(st.baud_rate);
+        println(" baud, 8N1");
+        print("  Status        : ");
+        if (st.is_online)
+        {
+            println(COLOR_GREEN "ONLINE / READY" COLOR_RESET);
+        }
+        else
+        {
+            println(COLOR_YELLOW "OFFLINE / DISCONNECTED" COLOR_RESET);
+        }
+        print("  Bytes RX      : ");
+        print_num(st.bytes_rx);
+        println(" bytes");
+        print("  Bytes TX      : ");
+        print_num(st.bytes_tx);
+        println(" bytes");
+        print("  RX Buffered   : ");
+        print_num(st.rx_buffered);
+        println(" bytes");
+        print("  Overruns      : ");
+        print_num(st.rx_overruns);
+        println("");
+        println("Commands: 'serial send <text>', 'serial read'");
+        return;
+    }
+
+    if (strncmp(arg, "send", 4) == 0 && (arg[4] == ' ' || arg[4] == '\0'))
+    {
+        const char *text = arg + 4;
+        while (*text == ' ') text++;
+
+        if (*text == '\0')
+        {
+            println("serial send: missing text to send");
+            return;
+        }
+
+        int fd = open("/dev/ttyS0");
+        if (fd < 0)
+        {
+            println("serial: failed to open /dev/ttyS0");
+            return;
+        }
+
+        size_t len = strlen(text);
+        write(fd, text, (uint64_t)len);
+        write(fd, "\n", 1);
+        close(fd);
+
+        print("[SERIAL] Transmitted ");
+        print_num((uint64_t)len + 1);
+        println(" bytes to /dev/ttyS0");
+        return;
+    }
+
+    if (strcmp(arg, "read") == 0)
+    {
+        int fd = open("/dev/ttyS0");
+        if (fd < 0)
+        {
+            println("serial: failed to open /dev/ttyS0");
+            return;
+        }
+
+        char buf[256];
+        int n = read(fd, buf, sizeof(buf) - 1);
+        close(fd);
+
+        if (n <= 0)
+        {
+            println("[SERIAL] No incoming bytes buffered in /dev/ttyS0");
+            return;
+        }
+
+        buf[n] = '\0';
+        print("[SERIAL] Received (");
+        print_num((uint64_t)n);
+        println(" bytes):");
+        println(buf);
+        return;
+    }
+
+    print("serial: unknown subcommand '");
+    print(arg);
+    println("'. Usage: serial [status|send <text>|read]");
 }
 
 static void cmd_pwd(void)
@@ -1277,6 +1385,10 @@ int main(void)
         else if (strncmp(cmd, "theme", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
         {
             cmd_theme(cmd + 5);
+        }
+        else if (strncmp(cmd, "serial", 6) == 0 && (cmd[6] == ' ' || cmd[6] == '\0'))
+        {
+            cmd_serial(cmd + 6);
         }
         else if (strncmp(cmd, "alias", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
         {

@@ -132,6 +132,36 @@ run-bios: $(IMAGE_NAME).iso
 		-boot d \
 		$(QEMUFLAGS)
 
+# Serial port bridge for robotics boards & telemetry simulation
+SERIAL_PORT ?= 4444
+QEMU_SERIAL_FLAGS := -serial tcp:127.0.0.1:$(SERIAL_PORT),server,nowait
+
+.PHONY: run-serial-bios
+run-serial-bios: $(IMAGE_NAME).iso
+	@echo "=========================================================="
+	@echo " ZenithOS COM1 Serial bridge listening on 127.0.0.1:$(SERIAL_PORT)"
+	@echo " Connect telemetry/mock board: nc 127.0.0.1 $(SERIAL_PORT)"
+	@echo "=========================================================="
+	qemu-system-$(ARCH) \
+		-M q35 \
+		-cdrom $(IMAGE_NAME).iso \
+		-boot d \
+		$(QEMUFLAGS) \
+		$(QEMU_SERIAL_FLAGS)
+
+.PHONY: run-serial
+run-serial: edk2-ovmf-bins $(IMAGE_NAME).iso
+	@echo "=========================================================="
+	@echo " ZenithOS COM1 Serial bridge listening on 127.0.0.1:$(SERIAL_PORT)"
+	@echo " Connect telemetry/mock board: nc 127.0.0.1 $(SERIAL_PORT)"
+	@echo "=========================================================="
+	qemu-system-$(ARCH) \
+		-M q35 \
+		-drive if=pflash,unit=0,format=raw,file=edk2-ovmf-bins/ovmf-code-$(ARCH).fd,readonly=on \
+		-cdrom $(IMAGE_NAME).iso \
+		$(QEMUFLAGS) \
+		$(QEMU_SERIAL_FLAGS)
+
 .PHONY: run-hdd-bios
 run-hdd-bios: $(IMAGE_NAME).hdd
 	qemu-system-$(ARCH) \
