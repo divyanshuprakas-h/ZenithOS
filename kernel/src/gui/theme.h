@@ -1,17 +1,17 @@
 #pragma once
 
 #include <stdint.h>
-
-/* ZenithOS Design System - Restrained Dark Theme */
+#include "gui_state.h"
 
 /* Layout metrics */
 #define TOPBAR_HEIGHT               36
 #define DOCK_WIDTH                  72
 #define TITLEBAR_HEIGHT             32
 
-/* Desktop Background */
-#define GUI_BG_TOP                  0x0A0E17
-#define GUI_BG_BOTTOM               0x111827
+/* Dynamic Palette References */
+#define GUI_ACCENT_PRIMARY          g_gui_accent
+#define GUI_BG_TOP                  g_gui_bg_top
+#define GUI_BG_BOTTOM               g_gui_bg_bottom
 
 /* Top Bar */
 #define GUI_TOPBAR_BG               0x0C101A
@@ -32,8 +32,7 @@
 #define GUI_WIN_BORDER_ACTIVE       0x2E3D52
 #define GUI_WIN_BORDER_INACTIVE     0x19212D
 
-/* Accent Palette */
-#define GUI_ACCENT_PRIMARY          0x38BDF8   /* Zenith Sky/Cyan */
+/* Fixed Accents */
 #define GUI_ACCENT_SUCCESS          0x10B981   /* Emerald / Maximize */
 #define GUI_ACCENT_WARNING          0xF59E0B   /* Amber / Minimize */
 #define GUI_ACCENT_DANGER           0xEF4444   /* Crimson / Close */

@@ -4,14 +4,18 @@
 #include "../terminal/terminal.h"
 #include "../hal/io.h"
 #include "../lib/convert.h"
+#include "../gui/gui_state.h"
 
 static inline void kprintf_putc(char ch)
 {
-    terminal_putchar(ch);
-
 #if defined(__x86_64__)
     outb(0xE9, (uint8_t)ch);
 #endif
+
+    if (!g_gui_active)
+    {
+        terminal_putchar(ch);
+    }
 }
 
 static void kprintf_puts(const char *str)

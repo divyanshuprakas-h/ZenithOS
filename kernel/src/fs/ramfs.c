@@ -13,6 +13,8 @@
 
 static ramfs_node_t ramfs_root;
 
+int ramfs_remove(vnode_t *node);
+
 static vnode_operations_t ramfs_vnode_ops = 
 {
     .lookup = ramfs_lookup,
@@ -20,7 +22,7 @@ static vnode_operations_t ramfs_vnode_ops =
     .mkdir = ramfs_mkdir,
     .read = ramfs_read,
     .write = ramfs_write,
-    .remove = NULL
+    .remove = ramfs_remove
 };
 
 static filesystem_operations_t ramfs_fs_ops =
@@ -98,14 +100,6 @@ int ramfs_lookup(vnode_t *dir, const char *name, vnode_t **result)
 
 int ramfs_mkdir(vnode_t *dir, const char *name)
 {
-    kprintf("[MKDIR] dir=%p\n", dir);
-
-    if (dir)
-    {
-        kprintf("[MKDIR] type=%d\n", dir->type);
-        kprintf("[MKDIR] private=%p\n", dir->private_data);
-    }
-
     if (dir == NULL || name == NULL)
         return KERNEL_EINVAL;
 
@@ -232,36 +226,40 @@ int ramfs_create(vnode_t *dir, const char *name)
 int ramfs_write(file_t *file, const void *buffer, uint64_t size)
 {
     if (file == NULL || buffer == NULL)
-        return KERNEL_EINVAL;
+        return -KERNEL_EINVAL;
+
+    if (file->node == NULL || file->node->type != VNODE_FILE)
+        return -KERNEL_ENOTSUP;
 
     ramfs_node_t *node = (ramfs_node_t *)file->node->private_data;
-
     if (node == NULL)
+        return -KERNEL_EINVAL;
+
+    uint64_t needed = file->position + size;
+    if (node->data == NULL || needed > node->capacity)
     {
-        return KERNEL_EINVAL;
+        uint64_t new_cap = needed < 256 ? 256 : needed * 2;
+        void *new_data = kmalloc(new_cap);
+        if (new_data == NULL)
+            return -KERNEL_ENOMEM;
+
+        if (node->data != NULL)
+        {
+            k_memcpy(new_data, node->data, node->vnode.size);
+            kfree(node->data);
+        }
+        node->data = new_data;
+        node->capacity = new_cap;
     }
 
-    if (file->node->type != VNODE_FILE)
-        return KERNEL_ENOTSUP;
-
-    if (node->data == NULL)
+    k_memcpy((char *)node->data + file->position, buffer, size);
+    file->position += size;
+    if (file->position > node->vnode.size)
     {
-        node->data = kmalloc(size);
-
-        if (node->data == NULL)
-            return KERNEL_ENOMEM;
-
-        node->capacity = size;
+        node->vnode.size = file->position;
     }
 
-    k_memcpy(node->data, buffer, size);
-
-    node->vnode.size = size;
-
-    file->position = size;
-
-    return KERNEL_SUCCESS;
-
+    return (int)size;
 }
 
 int ramfs_read(file_t *file, void *buffer, uint64_t size)
@@ -290,6 +288,54 @@ int ramfs_read(file_t *file, void *buffer, uint64_t size)
     file->position += bytes;
 
     return (int)bytes;
+}
+
+int ramfs_remove(vnode_t *node)
+{
+    if (node == NULL || node->parent == NULL)
+        return KERNEL_EINVAL;
+
+    ramfs_node_t *rnode = (ramfs_node_t *)node->private_data;
+    if (rnode == NULL)
+        return KERNEL_EINVAL;
+
+    if (node->type == VNODE_DIRECTORY && rnode->child_count > 0)
+    {
+        return KERNEL_EBUSY;
+    }
+
+    ramfs_node_t *parent_rnode = (ramfs_node_t *)node->parent->private_data;
+    if (parent_rnode == NULL)
+        return KERNEL_EINVAL;
+
+    int found_idx = -1;
+    for (uint32_t i = 0; i < parent_rnode->child_count; i++)
+    {
+        if (parent_rnode->children[i] == rnode)
+        {
+            found_idx = (int)i;
+            break;
+        }
+    }
+
+    if (found_idx == -1)
+        return KERNEL_ENOENT;
+
+    for (uint32_t i = (uint32_t)found_idx; i + 1 < parent_rnode->child_count; i++)
+    {
+        parent_rnode->children[i] = parent_rnode->children[i + 1];
+    }
+    parent_rnode->child_count--;
+    parent_rnode->children[parent_rnode->child_count] = NULL;
+
+    if (rnode->data != NULL)
+    {
+        kfree(rnode->data);
+        rnode->data = NULL;
+    }
+
+    kfree(rnode);
+    return KERNEL_SUCCESS;
 }
 
 int ramfs_init(filesystem_t *fs)

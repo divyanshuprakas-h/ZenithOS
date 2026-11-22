@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #define SYS_EXIT    0
 #define SYS_OPEN    1
@@ -11,6 +12,22 @@
 #define SYS_CLOSE   4
 #define SYS_YIELD   5
 #define SYS_SYSINFO 6
+#define SYS_READDIR 7
+#define SYS_CREATE  8
+#define SYS_MKDIR   9
+#define SYS_UNLINK  10
+#define SYS_SET_THEME 11
+#define SYS_SERIAL_STATUS 12
+
+typedef struct {
+    uint32_t port;
+    uint32_t baud_rate;
+    bool is_online;
+    uint64_t bytes_rx;
+    uint64_t bytes_tx;
+    uint64_t rx_overruns;
+    uint32_t rx_buffered;
+} serial_status_t;
 
 typedef struct
 {
@@ -19,6 +36,13 @@ typedef struct
     uint64_t used_pages;
     uint64_t page_size;
 } sysinfo_t;
+
+typedef struct
+{
+    char name[64];
+    uint32_t type; // 0 = file, 1 = directory
+    uint64_t size;
+} dirent_t;
 
 long syscall0(long number);
 long syscall1(long number, long arg1);
@@ -32,10 +56,20 @@ int close(int fd);
 void exit(int status);
 void yield(void);
 int sysinfo(sysinfo_t *info);
+int readdir(const char *path, dirent_t *entries, uint64_t max_entries);
+int create(const char *path);
+int mkdir(const char *path);
+int unlink(const char *path);
+int set_theme(int theme_id);
+int get_theme(void);
+int serial_status(serial_status_t *status);
 
 size_t strlen(const char *s);
 int strcmp(const char *s1, const char *s2);
 int strncmp(const char *s1, const char *s2, size_t n);
+char *strcpy(char *dest, const char *src);
+char *strcat(char *dest, const char *src);
+char *strchr(const char *s, int c);
 void print(const char *str);
 void println(const char *str);
 void print_num(uint64_t n);

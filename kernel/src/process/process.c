@@ -9,6 +9,7 @@
 #include "../lib/memory.h"
 #include "../stdio/printf.h"
 #include "../fs/fd.h"
+#include "../fs/vfs.h"
 #include  "../kernel_err/errno.h"
 #include "../vmm/user_vm_layout.h"
 
@@ -191,10 +192,20 @@ void process_exit(int exit_code)
     process->state = PROCESS_EXITED;
     process->exit_code = exit_code;
 
+    // Release and close open file descriptors
+    for (int i = 3; i < FD_MAX; i++)
+    {
+        file_t *f = fd_get(&process->fd_table, i);
+        if (f != NULL)
+        {
+            vfs_close(f);
+            fd_close(&process->fd_table, i);
+        }
+    }
+
     kprintf("[PROCESS] PID %llu exited with status %d\n", (unsigned long long)process->pid, exit_code);
 
     task_exit();
-
 }
 
 

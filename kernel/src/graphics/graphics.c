@@ -20,13 +20,28 @@ void draw_rect(
     size_t height,
     uint32_t color
 )
-
 {
-    for (size_t yy = y; yy < y+height ; yy++)
+    size_t fb_w = framebuffer_width();
+    size_t fb_h = framebuffer_height();
+
+    if (x >= fb_w || y >= fb_h)
+        return;
+
+    if (x + width > fb_w)
+        width = fb_w - x;
+
+    if (y + height > fb_h)
+        height = fb_h - y;
+
+    uint32_t *fb = (uint32_t *)framebuffer_address();
+    size_t pitch = framebuffer_pitch();
+
+    for (size_t yy = y; yy < y + height; yy++)
     {
-        for (size_t xx = x; xx < x+width ; xx++)
+        uint32_t *row = fb + yy * pitch + x;
+        for (size_t xx = 0; xx < width; xx++)
         {
-            draw_pixel(xx, yy, color);
+            row[xx] = color;
         }
     }
 }
@@ -76,11 +91,27 @@ void fill_rect(
     uint32_t color
 )
 {
+    size_t fb_w = framebuffer_width();
+    size_t fb_h = framebuffer_height();
+
+    if (x >= fb_w || y >= fb_h)
+        return;
+
+    if (x + width > fb_w)
+        width = fb_w - x;
+
+    if (y + height > fb_h)
+        height = fb_h - y;
+
+    uint32_t *fb = (uint32_t *)framebuffer_address();
+    size_t pitch = framebuffer_pitch();
+
     for (size_t py = y; py < y + height; py++)
     {
-        for (size_t px = x; px < x + width; px++)
+        uint32_t *row = fb + py * pitch + x;
+        for (size_t px = 0; px < width; px++)
         {
-            draw_pixel(px, py, color);
+            row[px] = color;
         }
     }
 }

@@ -97,6 +97,41 @@ int sysinfo(sysinfo_t *info)
     return (int)syscall1(SYS_SYSINFO, (long)info);
 }
 
+int readdir(const char *path, dirent_t *entries, uint64_t max_entries)
+{
+    return (int)syscall3(SYS_READDIR, (long)path, (long)entries, (long)max_entries);
+}
+
+int create(const char *path)
+{
+    return (int)syscall1(SYS_CREATE, (long)path);
+}
+
+int mkdir(const char *path)
+{
+    return (int)syscall1(SYS_MKDIR, (long)path);
+}
+
+int unlink(const char *path)
+{
+    return (int)syscall1(SYS_UNLINK, (long)path);
+}
+
+int set_theme(int theme_id)
+{
+    return (int)syscall1(SYS_SET_THEME, (long)theme_id);
+}
+
+int get_theme(void)
+{
+    return (int)syscall1(SYS_SET_THEME, -1L);
+}
+
+int serial_status(serial_status_t *status)
+{
+    return (int)syscall1(SYS_SERIAL_STATUS, (long)status);
+}
+
 size_t strlen(const char *s)
 {
     size_t len = 0;
@@ -131,6 +166,37 @@ int strncmp(const char *s1, const char *s2, size_t n)
         }
     }
     return 0;
+}
+
+char *strcpy(char *dest, const char *src)
+{
+    char *d = dest;
+    while ((*d++ = *src++) != '\0')
+        ;
+    return dest;
+}
+
+char *strcat(char *dest, const char *src)
+{
+    char *d = dest;
+    while (*d != '\0')
+    {
+        d++;
+    }
+    while ((*d++ = *src++) != '\0')
+        ;
+    return dest;
+}
+
+char *strchr(const char *s, int c)
+{
+    while (*s != '\0')
+    {
+        if (*s == (char)c)
+            return (char *)s;
+        s++;
+    }
+    return (c == '\0') ? (char *)s : NULL;
 }
 
 void print(const char *str)

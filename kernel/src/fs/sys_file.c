@@ -10,6 +10,7 @@
 #include "../hal/io.h"
 
 #include "../scheduler/scheduler.h"
+#include "../gui/gui_state.h"
 #include <stddef.h>
 
 int sys_open(const char *path)
@@ -110,4 +111,45 @@ int sys_close(int fd)
     }
 
     return fd_close(&process->fd_table, fd);
+}
+
+int sys_readdir(const char *path, void *buffer, uint64_t max_entries)
+{
+    if (path == NULL || buffer == NULL || max_entries == 0)
+    {
+        return -KERNEL_EINVAL;
+    }
+
+    size_t out_count = 0;
+    int rc = vfs_read_dir(path, (vfs_dirent_t *)buffer, (size_t)max_entries, &out_count);
+    if (rc != KERNEL_SUCCESS)
+    {
+        return -rc;
+    }
+
+    return (int)out_count;
+}
+
+int sys_create(const char *path)
+{
+    if (path == NULL)
+        return -KERNEL_EINVAL;
+    int rc = vfs_create(path);
+    return rc == KERNEL_SUCCESS ? 0 : -rc;
+}
+
+int sys_mkdir(const char *path)
+{
+    if (path == NULL)
+        return -KERNEL_EINVAL;
+    int rc = vfs_mkdir(path);
+    return rc == KERNEL_SUCCESS ? 0 : -rc;
+}
+
+int sys_unlink(const char *path)
+{
+    if (path == NULL)
+        return -KERNEL_EINVAL;
+    int rc = vfs_unlink(path);
+    return rc == KERNEL_SUCCESS ? 0 : -rc;
 }

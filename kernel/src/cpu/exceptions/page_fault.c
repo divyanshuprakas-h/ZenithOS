@@ -3,6 +3,7 @@
 
 #include "../../stdio/printf.h"
 #include "../../vmm/demand_paging.h"
+#include "../../process/process.h"
 
 static uint64_t read_cr2(void)
 {
@@ -42,6 +43,16 @@ void page_fault_handler(interrupt_context_t *context)
 
     if (vmm_handle_page_fault(fault_address, error))
     {
+        return;
+    }
+
+    if (user || ((context->frame.cs & 3) == 3))
+    {
+        process_t *proc = process_current();
+        kprintf("[USER FAULT] PID %llu unhandled page fault at %p (RIP=%p, err=%llx)\n",
+                proc ? (unsigned long long)proc->pid : 0,
+                (void *)fault_address, (void *)context->frame.rip, (unsigned long long)error);
+        process_exit(-1);
         return;
     }
 

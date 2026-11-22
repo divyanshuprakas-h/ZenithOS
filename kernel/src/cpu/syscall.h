@@ -11,6 +11,12 @@
 #define SYS_CLOSE   4
 #define SYS_YIELD   5
 #define SYS_SYSINFO 6
+#define SYS_READDIR 7
+#define SYS_CREATE  8
+#define SYS_MKDIR   9
+#define SYS_UNLINK  10
+#define SYS_SET_THEME 11
+#define SYS_SERIAL_STATUS 12
 
 typedef struct
 {

@@ -6,6 +6,8 @@
 #include "../hal/ports.h"
 #include "scancode.h"
 #include "../terminal/terminal.h"
+#include "../gui/window_manager.h"
+#include "../gui/gui_state.h"
 
 static bool shift_pressed = false;
 
@@ -50,6 +52,15 @@ void keyboard_handler(void)
 
     if (c != 0)
     {
+        Window *focused = window_manager_get_focused();
+        if (focused != NULL && focused->visible && !focused->minimised && focused->handle_key != NULL)
+        {
+            if (focused->handle_key(focused, c))
+            {
+                gui_needs_redraw = true;
+                return;
+            }
+        }
         terminal_handle_key(c);
     }
 }

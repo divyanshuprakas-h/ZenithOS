@@ -1,4 +1,5 @@
 #include "mouse.h"
+#include "../stdio/printf.h"
 
 #include "../cpu/irq.h"
 #include "../hal/io.h"
@@ -105,7 +106,14 @@ void mouse_handler(void)
     if ((status & 0x21) != 0x21)
         return;
 
-    mouse_packet[packet_index++] = inb(KEYBOARD_DATA);
+    uint8_t data = inb(KEYBOARD_DATA);
+
+    if (packet_index == 0 && !(data & 0x08))
+    {
+        return;
+    }
+
+    mouse_packet[packet_index++] = data;
 
     if (packet_index < 3)
         return;
@@ -118,11 +126,6 @@ void mouse_handler(void)
     mouse_state.left = new_left;
     mouse_state.right = (mouse_packet[0] & 0x02) != 0;
     mouse_state.middle = (mouse_packet[0] & 0x04) != 0;
-
-    if (!(mouse_packet[0] & 0x08))
-    {
-        return;
-    }
 
     int dx = (int8_t)mouse_packet[1];
     int dy = (int8_t)mouse_packet[2];
@@ -148,10 +151,12 @@ void mouse_handler(void)
         {
             window_manager_mouse_down(mouse_state.x, mouse_state.y);
         }
+        gui_needs_redraw = true;
     }
     else if (!new_left && prev_left)
     {
         window_manager_mouse_up();
+        gui_needs_redraw = true;
     }
 
     if (dx != 0 || dy != 0)
@@ -159,8 +164,5 @@ void mouse_handler(void)
         window_manager_mouse_move(mouse_state.x, mouse_state.y);
     }
 
-    if (!gui_needs_redraw)
-    {
-        cursor_move(mouse_state.x, mouse_state.y);
-    }
+    cursor_move(mouse_state.x, mouse_state.y);
 }

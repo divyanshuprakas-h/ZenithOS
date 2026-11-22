@@ -9,4 +9,8 @@ int k_strcmp(const char *a, const char *b);
 
 char *k_strcpy(char *dest, const char *src);
 
+char *k_strncpy(char *dest, const char *src, size_t n);
+
+char *k_strcat(char *dest, const char *src);
+
 #endif
