@@ -7,6 +7,7 @@
 #include "../framebuffer/framebuffer.h"
 #include "../gui/gui_state.h"
 #include "../gui/cursor.h"
+#include "../gui/desktop.h"
 #include "../gui/window_manager.h"
 
 MouseState mouse_state = 
@@ -143,7 +144,10 @@ void mouse_handler(void)
 
     if (new_left && !prev_left)
     {
-        window_manager_mouse_down(mouse_state.x, mouse_state.y);
+        if (!desktop_handle_mouse_down(mouse_state.x, mouse_state.y))
+        {
+            window_manager_mouse_down(mouse_state.x, mouse_state.y);
+        }
     }
     else if (!new_left && prev_left)
     {
