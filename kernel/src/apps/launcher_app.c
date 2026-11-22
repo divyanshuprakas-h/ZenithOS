@@ -4,6 +4,7 @@
 #include "calc_app.h"
 #include "sysmon_app.h"
 #include "settings_app.h"
+#include "device_studio_app.h"
 
 #include "../gui/windows.h"
 #include "../gui/window_manager.h"
@@ -117,11 +118,13 @@ static void draw_app_card(int x, int y, int w, int h, const char *name, const ch
         fill_rect(x + 22, y + 33, 4, 3, 0x94A3B8);
         fill_rect(x + 28, y + 33, 6, 3, 0x10B981);
     }
-    else if (app_type == 5) // About ZenithOS
+    else if (app_type == 5) // Device Studio
     {
-        draw_line(x + 20, y + 22, x + 34, y + 22, g_gui_accent);
-        draw_line(x + 34, y + 22, x + 20, y + 36, g_gui_accent);
-        draw_line(x + 20, y + 36, x + 34, y + 36, g_gui_accent);
+        draw_rect(x + 19, y + 20, 18, 20, 0x10B981);
+        draw_line(x + 22, y + 30, x + 25, y + 30, 0x34D399);
+        draw_line(x + 25, y + 30, x + 28, y + 25, 0x34D399);
+        draw_line(x + 28, y + 25, x + 31, y + 35, 0x34D399);
+        draw_line(x + 31, y + 35, x + 34, y + 30, 0x34D399);
     }
 
     draw_text_scaled(x + 52, y + 16, name, GUI_TEXT_PRIMARY, 1, 1);
@@ -200,8 +203,13 @@ void launcher_app_draw(Window *window)
     else if (gw != NULL && gw->minimised) { g_status = "Minimized"; g_color = GUI_ACCENT_WARNING; }
     draw_app_card(col1_x, row3_y, card_w, card_h, "Settings", "Theme & Config", g_status, g_color, 3);
 
-    // Row 3, Col 2: About ZenithOS
-    draw_app_card(col2_x, row3_y, card_w, card_h, "ZenithOS v0.1", "64-bit Pure C Kernel", "Active", GUI_ACCENT_SUCCESS, 5);
+    // Row 3, Col 2: Device Studio
+    Window *dw = device_studio_app_get_window();
+    const char *d_status = "Ready";
+    uint32_t d_color = GUI_TEXT_MUTED;
+    if (dw != NULL && dw->visible && !dw->minimised) { d_status = "Running"; d_color = GUI_ACCENT_SUCCESS; }
+    else if (dw != NULL && dw->minimised) { d_status = "Minimized"; d_color = GUI_ACCENT_WARNING; }
+    draw_app_card(col2_x, row3_y, card_w, card_h, "Device Studio", "Robotics & Telemetry", d_status, d_color, 5);
 }
 
 static void ensure_open_and_focus(Window *win)
@@ -266,10 +274,11 @@ static bool launcher_app_handle_mouse_down(Window *window, int x, int y)
         return true;
     }
 
-    // Card 5: About ZenithOS (Row 3, Col 2)
+    // Card 5: Device Studio (Row 3, Col 2)
     if (x >= col2_x && x <= col2_x + card_w && y >= row3_y && y <= row3_y + card_h)
     {
         launcher_app_toggle();
+        ensure_open_and_focus(device_studio_app_get_window());
         return true;
     }
 

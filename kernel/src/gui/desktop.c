@@ -15,6 +15,7 @@
 #include "../apps/sysmon_app.h"
 #include "../apps/settings_app.h"
 #include "../apps/calc_app.h"
+#include "../apps/device_studio_app.h"
 #include "../mm/pmm.h"
 #include "../hal/pit.h"
 #include "../stdio/printf.h"
@@ -284,6 +285,31 @@ static void desktop_draw_background(void)
     {
         fill_rect(4, 389, 3, 6, GUI_ACCENT_WARNING);
     }
+
+    /* --- Dock Item 6: Device Studio (DEV) --- */
+    fill_rect(14, 434, 44, 44, GUI_DOCK_TILE);
+    draw_rect(14, 434, 44, 44, GUI_DOCK_TILE_BORDER);
+
+    // Robotics microchip + oscilloscope pulse artwork
+    fill_rect(25, 443, 22, 22, 0x064E3B);
+    draw_rect(25, 443, 22, 22, 0x10B981);
+    draw_line(28, 454, 32, 454, 0x34D399);
+    draw_line(32, 454, 35, 448, 0x34D399);
+    draw_line(35, 448, 38, 460, 0x34D399);
+    draw_line(38, 460, 41, 454, 0x34D399);
+    draw_line(41, 454, 44, 454, 0x34D399);
+
+    draw_text_scaled(26, 482, "DEV", GUI_TEXT_SECONDARY, 1, 1);
+
+    Window *dev_win = device_studio_app_get_window();
+    if (dev_win != NULL && dev_win->visible && !dev_win->minimised)
+    {
+        fill_rect(4, 448, 3, 16, g_gui_accent);
+    }
+    else if (dev_win != NULL && dev_win->minimised)
+    {
+        fill_rect(4, 453, 3, 6, GUI_ACCENT_WARNING);
+    }
 }
 
 void desktop_init(void)
@@ -345,6 +371,13 @@ bool desktop_handle_mouse_down(int x, int y)
         else if (y >= 366 && y <= 424)
         {
             calc_app_dock_click();
+            gui_needs_redraw = true;
+            return true;
+        }
+        // Item 6: DEV
+        else if (y >= 430 && y <= 488)
+        {
+            device_studio_app_dock_click();
             gui_needs_redraw = true;
             return true;
         }

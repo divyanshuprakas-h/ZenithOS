@@ -36,6 +36,7 @@
 #include "apps/sysmon_app.h"
 #include "apps/settings_app.h"
 #include "apps/calc_app.h"
+#include "apps/device_studio_app.h"
 #include "gui/desktop.h"
 #include "gui/gui_state.h"
 
@@ -236,6 +237,8 @@ static void compositor_task(void)
             desktop_draw_stats_bar();
         }
 
+        device_studio_poll();
+
         if (gui_needs_redraw)
         {
             gui_needs_redraw = false;
@@ -429,6 +432,7 @@ void kmain(void)
     sysmon_app_init();
     settings_app_init();
     calc_app_init();
+    device_studio_app_init();
     launcher_app_init();
     desktop_init();
     desktop_draw();

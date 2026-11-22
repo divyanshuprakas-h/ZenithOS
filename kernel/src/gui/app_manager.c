@@ -5,15 +5,16 @@
 #include "../apps/calc_app.h"
 #include "../apps/sysmon_app.h"
 #include "../apps/settings_app.h"
+#include "../apps/device_studio_app.h"
 #include "../gui/window_manager.h"
 #include "../lib/string.h"
 
-static app_info_t s_apps[6];
+static app_info_t s_apps[7];
 static size_t s_app_count = 0;
 
 void app_manager_init(void)
 {
-    s_app_count = 6;
+    s_app_count = 7;
 
     // 0: Applications Launcher
     s_apps[0].id = "apps";
@@ -86,6 +87,18 @@ void app_manager_init(void)
     s_apps[5].toggle = settings_app_dock_click;
     s_apps[5].in_dock = true;
     s_apps[5].in_launcher = true;
+
+    // 6: Device Studio
+    s_apps[6].id = "studio";
+    s_apps[6].name = "Device Studio";
+    s_apps[6].description = "Robotics & Telemetry";
+    s_apps[6].dock_label = "DEV";
+    s_apps[6].icon_accent = 0x10B981;
+    s_apps[6].draw_icon = NULL;
+    s_apps[6].get_window = device_studio_app_get_window;
+    s_apps[6].toggle = device_studio_app_dock_click;
+    s_apps[6].in_dock = true;
+    s_apps[6].in_launcher = true;
 }
 
 size_t app_manager_get_count(void)
