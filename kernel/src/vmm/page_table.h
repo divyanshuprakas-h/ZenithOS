@@ -97,3 +97,20 @@ void page_table_dump(uint64_t virtual_address);
 
 void page_table_switch(uint64_t physical_pml4);
 
+bool page_table_check_user_access(
+    page_table_t *pml4,
+    uint64_t virtual_address,
+    bool write_access
+);
+
+uint64_t page_table_get_kernel_pml4_physical(void);
+
+void page_table_destroy(page_table_t *pml4, uint64_t physical_pml4);
+
+static inline void page_table_invalidate(uint64_t virtual_address)
+{
+    __asm__ volatile("invlpg (%0)" :: "r"(virtual_address) : "memory");
+}
+
+
+
