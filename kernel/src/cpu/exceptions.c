@@ -1,18 +1,9 @@
 #include "exceptions.h"
 #include "exceptions/page_fault.h"
 #include "exceptions/panic.h"
+#include "../process/process.h"
 
 #include "../stdio/printf.h"
-
-static void halt_forever(void)
-{
-    for (;;)
-    {
-#if defined(__x86_64__)
-        __asm__ volatile("hlt");
-#endif
-    }
-}
 
 static const char *const exception_names[32] =
 {
@@ -50,52 +41,6 @@ static const char *const exception_names[32] =
     "Reserved"
 };
 
-static void print_register(const char *name, uint64_t value)
-{
-    kprintf("%s = %p\n", name, (void *)value);
-}
-
-static void generic_exception_handler(interrupt_context_t *context)
-{
-    uint64_t interrupt_number = context->interrupt_number;
-    const char *name = "Unknown Exception";
-
-    if (interrupt_number < 32)
-    {
-        name = exception_names[interrupt_number];
-    }
-
-    kprintf("\n");
-    kprintf("================================\n");
-    kprintf("CPU EXCEPTION\n");
-    kprintf("================================\n");
-    kprintf("Vector      = %u\n", (unsigned int)interrupt_number);
-    kprintf("Name        = %s\n", name);
-    kprintf("Error Code  = %p\n", (void *)(uintptr_t)context->error_code);
-    kprintf("RIP         = %p\n", (void *)(uintptr_t)context->frame.rip);
-    kprintf("CS          = %p\n", (void *)(uintptr_t)context->frame.cs);
-    kprintf("RFLAGS      = %p\n", (void *)(uintptr_t)context->frame.rflags);
-    kprintf("\n");
-    print_register("RAX", context->regs.rax);
-    print_register("RBX", context->regs.rbx);
-    print_register("RCX", context->regs.rcx);
-    print_register("RDX", context->regs.rdx);
-    print_register("RBP", context->regs.rbp);
-    print_register("RSI", context->regs.rsi);
-    print_register("RDI", context->regs.rdi);
-    print_register("R8", context->regs.r8);
-    print_register("R9", context->regs.r9);
-    print_register("R10", context->regs.r10);
-    print_register("R11", context->regs.r11);
-    print_register("R12", context->regs.r12);
-    print_register("R13", context->regs.r13);
-    print_register("R14", context->regs.r14);
-    print_register("R15", context->regs.r15);
-    kprintf("\nSystem halted.\n");
-
-    halt_forever();
-}
-
 void exception_dispatch(interrupt_context_t *context)
 {
     switch (context->interrupt_number)
@@ -105,6 +50,17 @@ void exception_dispatch(interrupt_context_t *context)
             break;
 
         default:
+            if ((context->frame.cs & 3) == 3)
+            {
+                process_t *proc = process_current();
+                const char *ex_name = context->interrupt_number < 32 ?
+                                      exception_names[context->interrupt_number] : "Unknown";
+                kprintf("[USER EXCEPTION] PID %llu vector %u (%s) at RIP=%p\n",
+                        proc ? (unsigned long long)proc->pid : 0,
+                        (unsigned int)context->interrupt_number, ex_name, (void *)context->frame.rip);
+                process_exit(-1);
+                return;
+            }
             kernel_panic(
                 exception_names[context->interrupt_number],
                 context

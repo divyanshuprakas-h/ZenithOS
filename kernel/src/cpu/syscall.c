@@ -7,6 +7,7 @@
 #include "../stdio/printf.h"
 #include "../mm/pmm.h"
 #include "../gui/gui_state.h"
+#include "user_access.h"
 
 void syscall_dispatch(interrupt_context_t *context)
 {
@@ -30,14 +31,32 @@ void syscall_dispatch(interrupt_context_t *context)
             break;
 
         case SYS_OPEN:
-            ret = sys_open((const char *)arg1);
+        {
+            char path_buf[128];
+            if (copy_str_from_user(path_buf, (const char *)arg1, sizeof(path_buf)) != 0)
+            {
+                ret = -KERNEL_EINVAL;
+                break;
+            }
+            ret = sys_open(path_buf);
             break;
+        }
 
         case SYS_READ:
+            if (!user_ptr_valid((void *)arg2, arg3))
+            {
+                ret = -KERNEL_EINVAL;
+                break;
+            }
             ret = sys_read((int)arg1, (void *)arg2, arg3);
             break;
 
         case SYS_WRITE:
+            if (!user_ptr_valid((const void *)arg2, arg3))
+            {
+                ret = -KERNEL_EINVAL;
+                break;
+            }
             ret = sys_write((int)arg1, (void *)arg2, arg3);
             break;
 
@@ -51,36 +70,70 @@ void syscall_dispatch(interrupt_context_t *context)
             break;
 
         case SYS_SYSINFO:
-            if (arg1 == 0)
+            if (!user_ptr_valid((void *)arg1, sizeof(sysinfo_t)))
             {
                 ret = -KERNEL_EINVAL;
             }
             else
             {
-                sysinfo_t *info = (sysinfo_t *)arg1;
-                info->total_pages = pmm_get_total_pages();
-                info->free_pages = pmm_get_free_pages();
-                info->used_pages = pmm_get_used_pages();
-                info->page_size = 4096;
+                sysinfo_t info;
+                info.total_pages = pmm_get_total_pages();
+                info.free_pages = pmm_get_free_pages();
+                info.used_pages = pmm_get_used_pages();
+                info.page_size = 4096;
+                copy_to_user((void *)arg1, &info, sizeof(sysinfo_t));
                 ret = 0;
             }
             break;
 
         case SYS_READDIR:
-            ret = sys_readdir((const char *)arg1, (void *)arg2, arg3);
+        {
+            char path_buf[128];
+            if (copy_str_from_user(path_buf, (const char *)arg1, sizeof(path_buf)) != 0 ||
+                !user_ptr_valid((void *)arg2, arg3 * 72))
+            {
+                ret = -KERNEL_EINVAL;
+                break;
+            }
+            ret = sys_readdir(path_buf, (void *)arg2, arg3);
             break;
+        }
 
         case SYS_CREATE:
-            ret = sys_create((const char *)arg1);
+        {
+            char path_buf[128];
+            if (copy_str_from_user(path_buf, (const char *)arg1, sizeof(path_buf)) != 0)
+            {
+                ret = -KERNEL_EINVAL;
+                break;
+            }
+            ret = sys_create(path_buf);
             break;
+        }
 
         case SYS_MKDIR:
-            ret = sys_mkdir((const char *)arg1);
+        {
+            char path_buf[128];
+            if (copy_str_from_user(path_buf, (const char *)arg1, sizeof(path_buf)) != 0)
+            {
+                ret = -KERNEL_EINVAL;
+                break;
+            }
+            ret = sys_mkdir(path_buf);
             break;
+        }
 
         case SYS_UNLINK:
-            ret = sys_unlink((const char *)arg1);
+        {
+            char path_buf[128];
+            if (copy_str_from_user(path_buf, (const char *)arg1, sizeof(path_buf)) != 0)
+            {
+                ret = -KERNEL_EINVAL;
+                break;
+            }
+            ret = sys_unlink(path_buf);
             break;
+        }
 
         case SYS_SET_THEME:
             if (arg1 == (uint64_t)-1)
