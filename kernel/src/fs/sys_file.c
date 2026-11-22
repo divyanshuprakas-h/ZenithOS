@@ -23,15 +23,21 @@ int sys_open(const char *path)
     if (process == NULL)
         return KERNEL_EINVAL;
 
-    file_t *file;
+    file_t *file = NULL;
 
     int status = vfs_open(path, &file);
 
     if (status != KERNEL_SUCCESS)
         return status;
 
-    return fd_allocate(&process->fd_table, file); 
+    int fd = fd_allocate(&process->fd_table, file);
+    if (fd < 0)
+    {
+        vfs_close(file);
+        return fd;
+    }
 
+    return fd;
 }
 
 int sys_read(int fd, void *buffer, uint64_t size)
@@ -100,14 +106,30 @@ int sys_close(int fd)
 {
     if (fd == 0 || fd == 1 || fd == 2)
     {
-        return 0;
+        return KERNEL_SUCCESS;
     }
 
     process_t *process = process_current();
-
     if (process == NULL)
     {
         return KERNEL_EINVAL;
+    }
+
+    if (fd < 0 || fd >= FD_MAX)
+    {
+        return KERNEL_EINVAL;
+    }
+
+    file_t *file = fd_get(&process->fd_table, fd);
+    if (file == NULL)
+    {
+        return KERNEL_EINVAL;
+    }
+
+    int rc = vfs_close(file);
+    if (rc != KERNEL_SUCCESS)
+    {
+        return rc;
     }
 
     return fd_close(&process->fd_table, fd);
@@ -117,14 +139,14 @@ int sys_readdir(const char *path, void *buffer, uint64_t max_entries)
 {
     if (path == NULL || buffer == NULL || max_entries == 0)
     {
-        return -KERNEL_EINVAL;
+        return KERNEL_EINVAL;
     }
 
     size_t out_count = 0;
     int rc = vfs_read_dir(path, (vfs_dirent_t *)buffer, (size_t)max_entries, &out_count);
     if (rc != KERNEL_SUCCESS)
     {
-        return -rc;
+        return rc;
     }
 
     return (int)out_count;
@@ -133,23 +155,20 @@ int sys_readdir(const char *path, void *buffer, uint64_t max_entries)
 int sys_create(const char *path)
 {
     if (path == NULL)
-        return -KERNEL_EINVAL;
-    int rc = vfs_create(path);
-    return rc == KERNEL_SUCCESS ? 0 : -rc;
+        return KERNEL_EINVAL;
+    return vfs_create(path);
 }
 
 int sys_mkdir(const char *path)
 {
     if (path == NULL)
-        return -KERNEL_EINVAL;
-    int rc = vfs_mkdir(path);
-    return rc == KERNEL_SUCCESS ? 0 : -rc;
+        return KERNEL_EINVAL;
+    return vfs_mkdir(path);
 }
 
 int sys_unlink(const char *path)
 {
     if (path == NULL)
-        return -KERNEL_EINVAL;
-    int rc = vfs_unlink(path);
-    return rc == KERNEL_SUCCESS ? 0 : -rc;
+        return KERNEL_EINVAL;
+    return vfs_unlink(path);
 }

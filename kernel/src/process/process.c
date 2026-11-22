@@ -159,6 +159,25 @@ void process_destroy(process_t *process)
         return;
     }
 
+    // Release all open file descriptors
+    for (int i = 3; i < FD_MAX; i++)
+    {
+        file_t *f = fd_get(&process->fd_table, i);
+        if (f != NULL)
+        {
+            vfs_close(f);
+            fd_close(&process->fd_table, i);
+        }
+    }
+
+    // Clean up process page table and user frames
+    if (process->page_table != NULL && process->page_table_physical != 0)
+    {
+        page_table_destroy(process->page_table, process->page_table_physical);
+        process->page_table = NULL;
+        process->page_table_physical = 0;
+    }
+
     if (process_list == process)
     {
         process_list = process->next;
@@ -201,6 +220,21 @@ void process_exit(int exit_code)
             vfs_close(f);
             fd_close(&process->fd_table, i);
         }
+    }
+
+    // Note: The task's kernel_stack is currently in active use by this execution context,
+    // so it cannot be freed directly here. Reclaiming the kernel stack requires deferred
+    // reaper cleanup once the scheduler switches to another context.
+    if (process->page_table != NULL && process->page_table_physical != 0)
+    {
+        uint64_t kpml4 = page_table_get_kernel_pml4_physical();
+        if (kpml4 != 0)
+        {
+            page_table_switch(kpml4);
+        }
+        page_table_destroy(process->page_table, process->page_table_physical);
+        process->page_table = NULL;
+        process->page_table_physical = 0;
     }
 
     kprintf("[PROCESS] PID %llu exited with status %d\n", (unsigned long long)process->pid, exit_code);

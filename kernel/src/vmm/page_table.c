@@ -1,4 +1,6 @@
 #include "page_table.h"
+#include "demand_paging.h"
+#include "vma/vma.h"
 
 #include "../mm/pmm.h"
 #include "../lib/memory.h"
@@ -790,3 +792,160 @@ void page_table_dump(uint64_t virtual_address)
     kprintf("Executable      : %s\n", page_is_executable(*entry) ? "YES" : "NO");
     kprintf("============================\n");
 }
+
+bool page_table_check_user_access(
+    page_table_t *pml4,
+    uint64_t virtual_address,
+    bool write_access
+)
+{
+    if (pml4 == NULL)
+    {
+        pml4 = page_table_get_pml4();
+        if (pml4 == NULL)
+        {
+            return false;
+        }
+    }
+
+    page_walk_level_t level = PAGE_WALK_LEVEL_NONE;
+    page_walk_status_t status = PAGE_WALK_OK;
+    page_entry_t *entry = page_walk_internal(pml4, virtual_address, false, &level, &status);
+
+    if (entry != NULL && page_is_present(*entry))
+    {
+        if (!page_is_user(*entry))
+        {
+            return false;
+        }
+
+        if (write_access && !page_is_writable(*entry))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    // Check if covered by a demand-paged VMA
+    const vma_t *vma = vma_find(virtual_address);
+    if (vma != NULL && (vma->flags & VMA_DEMAND_PAGED))
+    {
+        if (write_access && !(vma->flags & VMA_WRITE))
+        {
+            return false;
+        }
+        if (!write_access && !(vma->flags & VMA_READ))
+        {
+            return false;
+        }
+
+        // Fault the page in safely
+        if (vmm_handle_page_fault(virtual_address, write_access ? 2 : 0))
+        {
+            entry = page_walk_internal(pml4, virtual_address, false, &level, &status);
+            if (entry != NULL && page_is_present(*entry))
+            {
+                if (!page_is_user(*entry))
+                {
+                    return false;
+                }
+                if (write_access && !page_is_writable(*entry))
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+uint64_t page_table_get_kernel_pml4_physical(void)
+{
+    return kernel_pml4_physical;
+}
+
+void page_table_destroy(page_table_t *pml4, uint64_t physical_pml4)
+{
+    if (pml4 == NULL || physical_pml4 == 0)
+    {
+        return;
+    }
+
+    if (pml4 == kernel_pml4 || physical_pml4 == kernel_pml4_physical)
+    {
+        return;
+    }
+
+    // If currently active CR3 is using this page table, switch to kernel PML4 first
+    if (active_pml4_physical == physical_pml4 && kernel_pml4_physical != 0)
+    {
+        page_table_switch(kernel_pml4_physical);
+    }
+
+    // Traverse only lower-half user space entries (0 <= pml4_idx < 256)
+    // Entries 256..511 are shared kernel mappings and must never be touched.
+    for (size_t pml4_idx = 0; pml4_idx < 256; pml4_idx++)
+    {
+        page_entry_t pml4_entry = pml4->entries[pml4_idx];
+        if (!page_is_present(pml4_entry) || !page_is_user(pml4_entry))
+        {
+            continue;
+        }
+
+        uint64_t pdpt_phys = pml4_entry & PAGE_TABLE_ADDRESS_MASK;
+        page_table_t *pdpt = (page_table_t *)page_table_physical_to_virtual(pdpt_phys);
+        if (pdpt != NULL)
+        {
+            for (size_t pdpt_idx = 0; pdpt_idx < 512; pdpt_idx++)
+            {
+                page_entry_t pdpt_entry = pdpt->entries[pdpt_idx];
+                if (!page_is_present(pdpt_entry) || !page_is_user(pdpt_entry))
+                {
+                    continue;
+                }
+
+                uint64_t pd_phys = pdpt_entry & PAGE_TABLE_ADDRESS_MASK;
+                page_table_t *pd = (page_table_t *)page_table_physical_to_virtual(pd_phys);
+                if (pd != NULL)
+                {
+                    for (size_t pd_idx = 0; pd_idx < 512; pd_idx++)
+                    {
+                        page_entry_t pd_entry = pd->entries[pd_idx];
+                        if (!page_is_present(pd_entry) || !page_is_user(pd_entry))
+                        {
+                            continue;
+                        }
+
+                        uint64_t pt_phys = pd_entry & PAGE_TABLE_ADDRESS_MASK;
+                        page_table_t *pt = (page_table_t *)page_table_physical_to_virtual(pt_phys);
+                        if (pt != NULL)
+                        {
+                            for (size_t pt_idx = 0; pt_idx < 512; pt_idx++)
+                            {
+                                page_entry_t pt_entry = pt->entries[pt_idx];
+                                if (page_is_present(pt_entry) && page_is_user(pt_entry))
+                                {
+                                    uint64_t user_frame = pt_entry & PAGE_TABLE_ADDRESS_MASK;
+                                    if (user_frame != 0)
+                                    {
+                                        pmm_free_page((void *)(uintptr_t)user_frame);
+                                    }
+                                }
+                            }
+                            pmm_free_page((void *)(uintptr_t)pt_phys);
+                        }
+                    }
+                    pmm_free_page((void *)(uintptr_t)pd_phys);
+                }
+            }
+            pmm_free_page((void *)(uintptr_t)pdpt_phys);
+        }
+    }
+
+    pmm_free_page((void *)(uintptr_t)physical_pml4);
+}
+
+
