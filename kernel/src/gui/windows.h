@@ -43,6 +43,7 @@ struct Window
     void (*draw_content)(Window *);
     void (*on_close)(Window *);
     bool (*handle_mouse_down)(Window *window, int x, int y);
+    bool (*handle_key)(Window *window, char c);
 };
 
 void window_draw(Window *window);

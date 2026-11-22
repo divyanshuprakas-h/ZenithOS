@@ -14,6 +14,7 @@
 #include "../apps/files_app.h"
 #include "../apps/sysmon_app.h"
 #include "../apps/settings_app.h"
+#include "../apps/calc_app.h"
 #include "../mm/pmm.h"
 #include "../hal/pit.h"
 #include "../stdio/printf.h"
@@ -242,6 +243,35 @@ static void desktop_draw_background(void)
     {
         fill_rect(4, 325, 3, 6, GUI_ACCENT_WARNING);
     }
+
+    /* --- Dock Item 5: Calculator (CALC) --- */
+    fill_rect(14, 370, 44, 44, GUI_DOCK_TILE);
+    draw_rect(14, 370, 44, 44, GUI_DOCK_TILE_BORDER);
+
+    // Calculator artwork
+    fill_rect(25, 378, 22, 27, 0x1A253A);
+    draw_rect(25, 378, 22, 27, 0x2E3E5B);
+
+    // Screen
+    fill_rect(28, 381, 16, 6, 0x070B12);
+
+    // Buttons
+    fill_rect(28, 390, 6, 4, 0x38BDF8); // op
+    fill_rect(37, 390, 6, 4, 0x38BDF8); // op
+    fill_rect(28, 397, 6, 4, 0x94A3B8); // digit
+    fill_rect(37, 397, 6, 4, 0x10B981); // equals
+
+    draw_text_scaled(22, 418, "CALC", GUI_TEXT_SECONDARY, 1, 1);
+
+    Window *calc_win = calc_app_get_window();
+    if (calc_win != NULL && calc_win->visible && !calc_win->minimised)
+    {
+        fill_rect(4, 384, 3, 16, g_gui_accent);
+    }
+    else if (calc_win != NULL && calc_win->minimised)
+    {
+        fill_rect(4, 389, 3, 6, GUI_ACCENT_WARNING);
+    }
 }
 
 void desktop_init(void)
@@ -296,6 +326,13 @@ bool desktop_handle_mouse_down(int x, int y)
         else if (y >= 302 && y <= 360)
         {
             settings_app_dock_click();
+            gui_needs_redraw = true;
+            return true;
+        }
+        // Item 5: CALC
+        else if (y >= 366 && y <= 424)
+        {
+            calc_app_dock_click();
             gui_needs_redraw = true;
             return true;
         }

@@ -34,6 +34,7 @@
 #include "apps/files_app.h"
 #include "apps/sysmon_app.h"
 #include "apps/settings_app.h"
+#include "apps/calc_app.h"
 #include "gui/desktop.h"
 #include "gui/gui_state.h"
 
@@ -423,6 +424,7 @@ void kmain(void)
     files_app_init();
     sysmon_app_init();
     settings_app_init();
+    calc_app_init();
     launcher_app_init();
     desktop_init();
     desktop_draw();

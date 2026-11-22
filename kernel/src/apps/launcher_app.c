@@ -1,6 +1,7 @@
 #include "launcher_app.h"
 #include "terminal_app.h"
 #include "files_app.h"
+#include "calc_app.h"
 #include "sysmon_app.h"
 #include "settings_app.h"
 
@@ -18,12 +19,12 @@ static Window launcher_window = {
     .y = 60,
 
     .width = 480,
-    .height = 320,
+    .height = 360,
 
     .saved_x = 140,
     .saved_y = 60,
     .saved_width = 480,
-    .saved_height = 320,
+    .saved_height = 360,
 
     .visible = false,
     .focused = false,
@@ -107,14 +108,29 @@ static void draw_app_card(int x, int y, int w, int h, const char *name, const ch
         draw_rect(x + 20, y + 22, 16, 16, 0xA855F7);
         fill_rect(x + 25, y + 27, 6, 6, 0xA855F7);
     }
+    else if (app_type == 4) // Calculator
+    {
+        draw_rect(x + 19, y + 20, 18, 20, 0x06B6D4);
+        fill_rect(x + 22, y + 23, 12, 3, 0x06B6D4);
+        fill_rect(x + 22, y + 28, 4, 3, 0x38BDF8);
+        fill_rect(x + 28, y + 28, 4, 3, 0x38BDF8);
+        fill_rect(x + 22, y + 33, 4, 3, 0x94A3B8);
+        fill_rect(x + 28, y + 33, 6, 3, 0x10B981);
+    }
+    else if (app_type == 5) // About ZenithOS
+    {
+        draw_line(x + 20, y + 22, x + 34, y + 22, g_gui_accent);
+        draw_line(x + 34, y + 22, x + 20, y + 36, g_gui_accent);
+        draw_line(x + 20, y + 36, x + 34, y + 36, g_gui_accent);
+    }
 
     draw_text_scaled(x + 52, y + 16, name, GUI_TEXT_PRIMARY, 1, 1);
     draw_text_scaled(x + 52, y + 32, desc, GUI_TEXT_MUTED, 1, 1);
 
     // Status pill
-    fill_rect(x + 14, y + 54, w - 28, 18, 0x0F1626);
-    draw_text_scaled(x + 22, y + 59, "Status: ", GUI_TEXT_MUTED, 1, 1);
-    draw_text_scaled(x + 80, y + 59, status, status_color, 1, 1);
+    fill_rect(x + 14, y + 52, w - 28, 16, 0x0F1626);
+    draw_text_scaled(x + 22, y + 56, "Status: ", GUI_TEXT_MUTED, 1, 1);
+    draw_text_scaled(x + 80, y + 56, status, status_color, 1, 1);
 }
 
 void launcher_app_draw(Window *window)
@@ -132,18 +148,19 @@ void launcher_app_draw(Window *window)
     // Content background
     fill_rect(x + 2, y + TITLEBAR_HEIGHT, w - 4, h - TITLEBAR_HEIGHT - 2, 0x0B0F19);
 
-    draw_text_scaled(x + 20, y + 44, "APPLICATIONS", g_gui_accent, 1, 1);
-    draw_text_scaled(x + 20, y + 60, "Click any app to launch or bring to focus:", GUI_TEXT_SECONDARY, 1, 1);
+    draw_text_scaled(x + 20, y + 42, "APPLICATIONS", g_gui_accent, 1, 1);
+    draw_text_scaled(x + 20, y + 58, "Click any app to launch or bring to focus:", GUI_TEXT_SECONDARY, 1, 1);
 
     int card_w = (w - 56) / 2;
-    int card_h = 80;
+    int card_h = 74;
 
     int col1_x = x + 20;
     int col2_x = x + 20 + card_w + 16;
-    int row1_y = y + 80;
-    int row2_y = y + 80 + card_h + 16;
+    int row1_y = y + 78;
+    int row2_y = y + 78 + card_h + 12;
+    int row3_y = y + 78 + (card_h + 12) * 2;
 
-    // 0: Terminal
+    // Row 1, Col 1: Terminal
     Window *tw = terminal_app_get_window();
     const char *t_status = "Ready";
     uint32_t t_color = GUI_TEXT_MUTED;
@@ -151,7 +168,7 @@ void launcher_app_draw(Window *window)
     else if (tw != NULL && tw->minimised) { t_status = "Minimized"; t_color = GUI_ACCENT_WARNING; }
     draw_app_card(col1_x, row1_y, card_w, card_h, "Terminal", "Ring 3 User Shell", t_status, t_color, 0);
 
-    // 1: Files
+    // Row 1, Col 2: Files
     Window *fw = files_app_get_window();
     const char *f_status = "Ready";
     uint32_t f_color = GUI_TEXT_MUTED;
@@ -159,21 +176,32 @@ void launcher_app_draw(Window *window)
     else if (fw != NULL && fw->minimised) { f_status = "Minimized"; f_color = GUI_ACCENT_WARNING; }
     draw_app_card(col2_x, row1_y, card_w, card_h, "Files", "VFS File Manager", f_status, f_color, 1);
 
-    // 2: System Monitor
+    // Row 2, Col 1: Calculator
+    Window *cw = calc_app_get_window();
+    const char *c_status = "Ready";
+    uint32_t c_color = GUI_TEXT_MUTED;
+    if (cw != NULL && cw->visible && !cw->minimised) { c_status = "Running"; c_color = GUI_ACCENT_SUCCESS; }
+    else if (cw != NULL && cw->minimised) { c_status = "Minimized"; c_color = GUI_ACCENT_WARNING; }
+    draw_app_card(col1_x, row2_y, card_w, card_h, "Calculator", "System Math & Hex", c_status, c_color, 4);
+
+    // Row 2, Col 2: System Monitor
     Window *sw = sysmon_app_get_window();
     const char *s_status = "Ready";
     uint32_t s_color = GUI_TEXT_MUTED;
     if (sw != NULL && sw->visible && !sw->minimised) { s_status = "Running"; s_color = GUI_ACCENT_SUCCESS; }
     else if (sw != NULL && sw->minimised) { s_status = "Minimized"; s_color = GUI_ACCENT_WARNING; }
-    draw_app_card(col1_x, row2_y, card_w, card_h, "System Monitor", "RAM & System Stats", s_status, s_color, 2);
+    draw_app_card(col2_x, row2_y, card_w, card_h, "System Monitor", "RAM & System Stats", s_status, s_color, 2);
 
-    // 3: Settings
+    // Row 3, Col 1: Settings
     Window *gw = settings_app_get_window();
     const char *g_status = "Ready";
     uint32_t g_color = GUI_TEXT_MUTED;
     if (gw != NULL && gw->visible && !gw->minimised) { g_status = "Running"; g_color = GUI_ACCENT_SUCCESS; }
     else if (gw != NULL && gw->minimised) { g_status = "Minimized"; g_color = GUI_ACCENT_WARNING; }
-    draw_app_card(col2_x, row2_y, card_w, card_h, "Settings", "Theme & Config", g_status, g_color, 3);
+    draw_app_card(col1_x, row3_y, card_w, card_h, "Settings", "Theme & Config", g_status, g_color, 3);
+
+    // Row 3, Col 2: About ZenithOS
+    draw_app_card(col2_x, row3_y, card_w, card_h, "ZenithOS v0.1", "64-bit Pure C Kernel", "Active", GUI_ACCENT_SUCCESS, 5);
 }
 
 static void ensure_open_and_focus(Window *win)
@@ -190,14 +218,15 @@ static bool launcher_app_handle_mouse_down(Window *window, int x, int y)
 {
     int w = window->width;
     int card_w = (w - 56) / 2;
-    int card_h = 80;
+    int card_h = 74;
 
     int col1_x = window->x + 20;
     int col2_x = window->x + 20 + card_w + 16;
-    int row1_y = window->y + 80;
-    int row2_y = window->y + 80 + card_h + 16;
+    int row1_y = window->y + 78;
+    int row2_y = window->y + 78 + card_h + 12;
+    int row3_y = window->y + 78 + (card_h + 12) * 2;
 
-    // Card 0: Terminal
+    // Card 0: Terminal (Row 1, Col 1)
     if (x >= col1_x && x <= col1_x + card_w && y >= row1_y && y <= row1_y + card_h)
     {
         launcher_app_toggle();
@@ -205,7 +234,7 @@ static bool launcher_app_handle_mouse_down(Window *window, int x, int y)
         return true;
     }
 
-    // Card 1: Files
+    // Card 1: Files (Row 1, Col 2)
     if (x >= col2_x && x <= col2_x + card_w && y >= row1_y && y <= row1_y + card_h)
     {
         launcher_app_toggle();
@@ -213,19 +242,34 @@ static bool launcher_app_handle_mouse_down(Window *window, int x, int y)
         return true;
     }
 
-    // Card 2: System Monitor
+    // Card 2: Calculator (Row 2, Col 1)
     if (x >= col1_x && x <= col1_x + card_w && y >= row2_y && y <= row2_y + card_h)
+    {
+        launcher_app_toggle();
+        ensure_open_and_focus(calc_app_get_window());
+        return true;
+    }
+
+    // Card 3: System Monitor (Row 2, Col 2)
+    if (x >= col2_x && x <= col2_x + card_w && y >= row2_y && y <= row2_y + card_h)
     {
         launcher_app_toggle();
         ensure_open_and_focus(sysmon_app_get_window());
         return true;
     }
 
-    // Card 3: Settings
-    if (x >= col2_x && x <= col2_x + card_w && y >= row2_y && y <= row2_y + card_h)
+    // Card 4: Settings (Row 3, Col 1)
+    if (x >= col1_x && x <= col1_x + card_w && y >= row3_y && y <= row3_y + card_h)
     {
         launcher_app_toggle();
         ensure_open_and_focus(settings_app_get_window());
+        return true;
+    }
+
+    // Card 5: About ZenithOS (Row 3, Col 2)
+    if (x >= col2_x && x <= col2_x + card_w && y >= row3_y && y <= row3_y + card_h)
+    {
+        launcher_app_toggle();
         return true;
     }
 
