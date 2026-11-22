@@ -12,25 +12,35 @@ int process_map_segment(
     const void *elf_base
 )
 {
-    if (process == NULL)
+    if (process == NULL || ph == NULL || elf_base == NULL)
         return KERNEL_EINVAL;
 
-    if (ph == NULL)
-        return KERNEL_EINVAL;
-
-    if (elf_base == NULL)
+    if (process->page_table == NULL)
         return KERNEL_EINVAL;
 
     uint64_t page_count = (ph->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
 
-    kprintf("[ELF] Segment requires %llu page(s)\n", (unsigned long long)page_count);
-
-    for (uint64_t i = 0; i < page_count ; i++)
+    for (uint64_t i = 0; i < page_count; i++)
     {
         void *page = pmm_alloc_page();
 
         if (page == NULL)
+        {
+            // Unwind previously allocated pages in this segment
+            for (uint64_t r = 0; r < i; r++)
+            {
+                uint64_t roll_va = ph->p_vaddr + (r * PAGE_SIZE);
+                page_entry_t *pte = page_walk(process->page_table, roll_va, false);
+                if (pte != NULL && page_is_present(*pte))
+                {
+                    uint64_t frame = *pte & PAGE_TABLE_ADDRESS_MASK;
+                    pmm_free_page((void *)(uintptr_t)frame);
+                    *pte = 0;
+                    page_table_invalidate(roll_va);
+                }
+            }
             return KERNEL_ENOMEM;
+        }
 
         uint64_t va = ph->p_vaddr + (i * PAGE_SIZE);
         uint64_t page_offset = i * PAGE_SIZE;
@@ -43,6 +53,19 @@ int process_map_segment(
         ))
         {
             pmm_free_page(page);
+            // Unwind previously allocated pages in this segment
+            for (uint64_t r = 0; r < i; r++)
+            {
+                uint64_t roll_va = ph->p_vaddr + (r * PAGE_SIZE);
+                page_entry_t *pte = page_walk(process->page_table, roll_va, false);
+                if (pte != NULL && page_is_present(*pte))
+                {
+                    uint64_t frame = *pte & PAGE_TABLE_ADDRESS_MASK;
+                    pmm_free_page((void *)(uintptr_t)frame);
+                    *pte = 0;
+                    page_table_invalidate(roll_va);
+                }
+            }
             return KERNEL_ENOMEM;
         }
 
@@ -52,7 +75,6 @@ int process_map_segment(
         if (page_offset < ph->p_filesz)
         {
             bytes_to_copy = ph->p_filesz - page_offset;
-
             if (bytes_to_copy > PAGE_SIZE)
                 bytes_to_copy = PAGE_SIZE;
         }
@@ -65,15 +87,14 @@ int process_map_segment(
         }
 
         uint64_t bytes_in_memory = 0;
-
         if (page_offset < ph->p_memsz)
         {
             bytes_in_memory = ph->p_memsz - page_offset;
-
             if (bytes_in_memory > PAGE_SIZE)
                 bytes_in_memory = PAGE_SIZE;
         }
 
+        // Zero BSS / uninitialized memory beyond filesz
         if (bytes_in_memory > bytes_to_copy)
         {
             k_memset(
@@ -82,12 +103,7 @@ int process_map_segment(
                 bytes_in_memory - bytes_to_copy
             );
         }
-
-        kprintf("[ELF] page %llu VA=0x%llx PA=%p copied=%llu zero=%llu\n", (unsigned long long)i, (unsigned long long)va, 
-                page, (unsigned long long)bytes_to_copy, (unsigned long long)(bytes_in_memory - bytes_to_copy));
-
     }
 
     return KERNEL_SUCCESS;
-
 }

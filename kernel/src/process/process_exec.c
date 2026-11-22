@@ -8,15 +8,13 @@
 
 #include <stddef.h>
 
-int process_exec(process_t *process, const void *elf_image)
+int process_exec(process_t *process, const void *elf_image, size_t image_len)
 {
     if (process == NULL || elf_image == NULL)
         return KERNEL_EINVAL;
 
     elf_image_t image;
-
-    int status = elf_load_image(elf_image, &image);
-
+    int status = elf_load_image(elf_image, image_len, &image);
     if (status != KERNEL_SUCCESS)
         return status;
 
@@ -24,8 +22,7 @@ int process_exec(process_t *process, const void *elf_image)
 
     for (uint16_t i = 0; i < header->e_phnum; i++)
     {
-        const elf64_program_header_t *ph = elf_program_header(header, i);
-
+        const elf64_program_header_t *ph = elf_program_header(header, i, image_len);
         if (ph == NULL)
             continue;
 
@@ -33,7 +30,6 @@ int process_exec(process_t *process, const void *elf_image)
             continue;
 
         int rc = process_map_segment(process, ph, elf_image);
-
         if (rc != KERNEL_SUCCESS)
         {
             return rc;
@@ -41,36 +37,23 @@ int process_exec(process_t *process, const void *elf_image)
     }
 
     process->image = image;
-    
     process->user_rip = image.entry;
 
     page_entry_t *pte = page_walk(process->page_table, process->user_rip, false);
-
-    if (pte == NULL)
+    if (pte == NULL || !page_is_present(*pte) || !page_is_user(*pte))
     {
-        kprintf("[USER] No PTE for entry!\n");
+        kprintf("[USER] Invalid PTE for entry point 0x%llx\n", (unsigned long long)process->user_rip);
         return KERNEL_EINVAL;
-    }
-
-    uint64_t phys = (*pte) & PAGE_TABLE_ADDRESS_MASK;
-
-    uint8_t *code = (uint8_t *)page_table_physical_to_virtual(phys);
-
-    kprintf("[USER CODE]\n");
-
-    for (int i = 0; i < 8; i++)
-    {
-        kprintf("Byte %d = 0x%llx\n", i, (unsigned long long)code[i]);
     }
 
     process->user_rsp = process->user_stack_top - 8;
     process->user_rflags = 0x202;
     process->is_user_process = true;
 
-    kprintf("[USER] RIP = 0x%llx\n", (unsigned long long)process->user_rip);
-    kprintf("[USER] RSP = 0x%llx\n", (unsigned long long)process->user_rsp);
-    kprintf("[USER] RFLAGS = 0x%llx\n", (unsigned long long)process->user_rflags);
-    kprintf("[PROCESS] PID %llu marked as USER process\n", (unsigned long long)process->pid);
+    kprintf("[PROCESS] PID %llu loaded ELF image (entry=0x%llx, rsp=0x%llx)\n",
+            (unsigned long long)process->pid,
+            (unsigned long long)process->user_rip,
+            (unsigned long long)process->user_rsp);
 
     return KERNEL_SUCCESS;
 }
