@@ -32,6 +32,8 @@ int ramfs_write(file_t *file, const void *buffer, uint64_t size);
 
 int ramfs_read(file_t *file, void *buffer, uint64_t size);
 
+int ramfs_remove(vnode_t *node);
+
 int ramfs_init(filesystem_t *fs);
 
 

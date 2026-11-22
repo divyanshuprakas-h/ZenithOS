@@ -112,6 +112,11 @@ int mkdir(const char *path)
     return (int)syscall1(SYS_MKDIR, (long)path);
 }
 
+int unlink(const char *path)
+{
+    return (int)syscall1(SYS_UNLINK, (long)path);
+}
+
 size_t strlen(const char *s)
 {
     size_t len = 0;

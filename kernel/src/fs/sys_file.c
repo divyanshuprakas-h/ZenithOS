@@ -145,3 +145,11 @@ int sys_mkdir(const char *path)
     int rc = vfs_mkdir(path);
     return rc == KERNEL_SUCCESS ? 0 : -rc;
 }
+
+int sys_unlink(const char *path)
+{
+    if (path == NULL)
+        return -KERNEL_EINVAL;
+    int rc = vfs_unlink(path);
+    return rc == KERNEL_SUCCESS ? 0 : -rc;
+}

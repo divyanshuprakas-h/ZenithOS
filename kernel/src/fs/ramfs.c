@@ -13,6 +13,8 @@
 
 static ramfs_node_t ramfs_root;
 
+int ramfs_remove(vnode_t *node);
+
 static vnode_operations_t ramfs_vnode_ops = 
 {
     .lookup = ramfs_lookup,
@@ -20,7 +22,7 @@ static vnode_operations_t ramfs_vnode_ops =
     .mkdir = ramfs_mkdir,
     .read = ramfs_read,
     .write = ramfs_write,
-    .remove = NULL
+    .remove = ramfs_remove
 };
 
 static filesystem_operations_t ramfs_fs_ops =
@@ -286,6 +288,54 @@ int ramfs_read(file_t *file, void *buffer, uint64_t size)
     file->position += bytes;
 
     return (int)bytes;
+}
+
+int ramfs_remove(vnode_t *node)
+{
+    if (node == NULL || node->parent == NULL)
+        return KERNEL_EINVAL;
+
+    ramfs_node_t *rnode = (ramfs_node_t *)node->private_data;
+    if (rnode == NULL)
+        return KERNEL_EINVAL;
+
+    if (node->type == VNODE_DIRECTORY && rnode->child_count > 0)
+    {
+        return KERNEL_EBUSY;
+    }
+
+    ramfs_node_t *parent_rnode = (ramfs_node_t *)node->parent->private_data;
+    if (parent_rnode == NULL)
+        return KERNEL_EINVAL;
+
+    int found_idx = -1;
+    for (uint32_t i = 0; i < parent_rnode->child_count; i++)
+    {
+        if (parent_rnode->children[i] == rnode)
+        {
+            found_idx = (int)i;
+            break;
+        }
+    }
+
+    if (found_idx == -1)
+        return KERNEL_ENOENT;
+
+    for (uint32_t i = (uint32_t)found_idx; i + 1 < parent_rnode->child_count; i++)
+    {
+        parent_rnode->children[i] = parent_rnode->children[i + 1];
+    }
+    parent_rnode->child_count--;
+    parent_rnode->children[parent_rnode->child_count] = NULL;
+
+    if (rnode->data != NULL)
+    {
+        kfree(rnode->data);
+        rnode->data = NULL;
+    }
+
+    kfree(rnode);
+    return KERNEL_SUCCESS;
 }
 
 int ramfs_init(filesystem_t *fs)

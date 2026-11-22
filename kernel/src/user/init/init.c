@@ -200,6 +200,7 @@ static void cmd_help(void)
     println("  pwd               - Print working directory");
     println("  touch <file>      - Create an empty file");
     println("  mkdir <dir>       - Create a new directory");
+    println("  rm / rmdir <path> - Remove file or empty directory");
     println("  write <file> <tx> - Write text into a file");
     println("  cat <file>        - Output file contents");
     println("  env               - List environment variables");
@@ -449,6 +450,28 @@ static void cmd_mkdir(const char *arg)
     }
 }
 
+static void cmd_rm(const char *arg)
+{
+    while (*arg == ' ') arg++;
+
+    if (*arg == '\0')
+    {
+        println("rm: missing operand");
+        return;
+    }
+
+    char target[128];
+    resolve_path(arg, target, sizeof(target));
+
+    int rc = unlink(target);
+    if (rc != 0)
+    {
+        print("rm: cannot remove '");
+        print(target);
+        println("': No such file or directory or directory not empty");
+    }
+}
+
 static void cmd_write(const char *arg)
 {
     while (*arg == ' ') arg++;
@@ -662,6 +685,14 @@ int main(void)
         else if (strncmp(cmd, "mkdir", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
         {
             cmd_mkdir(cmd + 5);
+        }
+        else if (strncmp(cmd, "rmdir", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
+        {
+            cmd_rm(cmd + 5);
+        }
+        else if (strncmp(cmd, "rm", 2) == 0 && (cmd[2] == ' ' || cmd[2] == '\0'))
+        {
+            cmd_rm(cmd + 2);
         }
         else if (strncmp(cmd, "write", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
         {

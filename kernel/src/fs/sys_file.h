@@ -17,4 +17,6 @@ int sys_create(const char *path);
 
 int sys_mkdir(const char *path);
 
+int sys_unlink(const char *path);
+
 #endif

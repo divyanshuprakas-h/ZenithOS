@@ -15,6 +15,7 @@
 #define SYS_READDIR 7
 #define SYS_CREATE  8
 #define SYS_MKDIR   9
+#define SYS_UNLINK  10
 
 typedef struct
 {
@@ -46,6 +47,7 @@ int sysinfo(sysinfo_t *info);
 int readdir(const char *path, dirent_t *entries, uint64_t max_entries);
 int create(const char *path);
 int mkdir(const char *path);
+int unlink(const char *path);
 
 size_t strlen(const char *s);
 int strcmp(const char *s1, const char *s2);

@@ -327,3 +327,22 @@ int vfs_mkdir(const char *path)
 
     return dir->ops->mkdir(dir, name);
 }
+
+int vfs_unlink(const char *path)
+{
+    if (path == NULL)
+        return KERNEL_EINVAL;
+
+    vnode_t *node = NULL;
+    int rc = vfs_lookup(path, &node);
+    if (rc != KERNEL_SUCCESS)
+        return rc;
+
+    if (node->parent == NULL)
+        return KERNEL_EBUSY;
+
+    if (node->ops == NULL || node->ops->remove == NULL)
+        return KERNEL_ENOTSUP;
+
+    return node->ops->remove(node);
+}

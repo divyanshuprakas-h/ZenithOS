@@ -14,6 +14,7 @@
 #define SYS_READDIR 7
 #define SYS_CREATE  8
 #define SYS_MKDIR   9
+#define SYS_UNLINK  10
 
 typedef struct
 {
