@@ -98,14 +98,6 @@ int ramfs_lookup(vnode_t *dir, const char *name, vnode_t **result)
 
 int ramfs_mkdir(vnode_t *dir, const char *name)
 {
-    kprintf("[MKDIR] dir=%p\n", dir);
-
-    if (dir)
-    {
-        kprintf("[MKDIR] type=%d\n", dir->type);
-        kprintf("[MKDIR] private=%p\n", dir->private_data);
-    }
-
     if (dir == NULL || name == NULL)
         return KERNEL_EINVAL;
 

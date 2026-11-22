@@ -102,6 +102,16 @@ int readdir(const char *path, dirent_t *entries, uint64_t max_entries)
     return (int)syscall3(SYS_READDIR, (long)path, (long)entries, (long)max_entries);
 }
 
+int create(const char *path)
+{
+    return (int)syscall1(SYS_CREATE, (long)path);
+}
+
+int mkdir(const char *path)
+{
+    return (int)syscall1(SYS_MKDIR, (long)path);
+}
+
 size_t strlen(const char *s)
 {
     size_t len = 0;

@@ -33,4 +33,8 @@ int vfs_read(file_t *file, void *buffer, uint64_t size);
 
 int vfs_close(file_t *file);
 
+int vfs_create(const char *path);
+
+int vfs_mkdir(const char *path);
+
 

@@ -239,3 +239,91 @@ int vfs_close(file_t *file)
     file_close(file);
     return KERNEL_SUCCESS;
 }
+
+static int split_parent_and_name(const char *path, char *parent_path, size_t max_parent, const char **out_name)
+{
+    if (path == NULL || parent_path == NULL || out_name == NULL)
+        return KERNEL_EINVAL;
+
+    size_t len = k_strlen(path);
+    while (len > 0 && path[len - 1] == '/')
+    {
+        len--;
+    }
+    if (len == 0)
+    {
+        return KERNEL_EINVAL;
+    }
+
+    int last_slash = -1;
+    for (int i = (int)len - 1; i >= 0; i--)
+    {
+        if (path[i] == '/')
+        {
+            last_slash = i;
+            break;
+        }
+    }
+
+    if (last_slash < 0)
+    {
+        k_strcpy(parent_path, "/");
+        *out_name = path;
+    }
+    else if (last_slash == 0)
+    {
+        k_strcpy(parent_path, "/");
+        *out_name = path + 1;
+    }
+    else
+    {
+        if ((size_t)last_slash >= max_parent)
+            return KERNEL_EINVAL;
+        for (int i = 0; i < last_slash; i++)
+        {
+            parent_path[i] = path[i];
+        }
+        parent_path[last_slash] = '\0';
+        *out_name = path + last_slash + 1;
+    }
+
+    return KERNEL_SUCCESS;
+}
+
+int vfs_create(const char *path)
+{
+    char parent[128];
+    const char *name = NULL;
+    int rc = split_parent_and_name(path, parent, sizeof(parent), &name);
+    if (rc != KERNEL_SUCCESS)
+        return rc;
+
+    vnode_t *dir = NULL;
+    rc = vfs_lookup(parent, &dir);
+    if (rc != KERNEL_SUCCESS)
+        return rc;
+
+    if (dir->ops == NULL || dir->ops->create == NULL)
+        return KERNEL_ENOTSUP;
+
+    return dir->ops->create(dir, name);
+}
+
+int vfs_mkdir(const char *path)
+{
+    char parent[128];
+    const char *name = NULL;
+    int rc = split_parent_and_name(path, parent, sizeof(parent), &name);
+    if (rc != KERNEL_SUCCESS)
+        return rc;
+
+    vnode_t *dir = NULL;
+    rc = vfs_lookup(parent, &dir);
+    if (rc != KERNEL_SUCCESS)
+        return rc;
+
+    if (dir->ops == NULL || dir->ops->mkdir == NULL)
+        return KERNEL_ENOTSUP;
+
+    return dir->ops->mkdir(dir, name);
+}

@@ -12,6 +12,8 @@
 #define SYS_YIELD   5
 #define SYS_SYSINFO 6
 #define SYS_READDIR 7
+#define SYS_CREATE  8
+#define SYS_MKDIR   9
 
 typedef struct
 {

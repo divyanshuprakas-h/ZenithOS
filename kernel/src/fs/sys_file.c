@@ -130,3 +130,19 @@ int sys_readdir(const char *path, void *buffer, uint64_t max_entries)
 
     return (int)out_count;
 }
+
+int sys_create(const char *path)
+{
+    if (path == NULL)
+        return -KERNEL_EINVAL;
+    int rc = vfs_create(path);
+    return rc == KERNEL_SUCCESS ? 0 : -rc;
+}
+
+int sys_mkdir(const char *path)
+{
+    if (path == NULL)
+        return -KERNEL_EINVAL;
+    int rc = vfs_mkdir(path);
+    return rc == KERNEL_SUCCESS ? 0 : -rc;
+}

@@ -13,4 +13,8 @@ int sys_write(int fd, void *buffer, uint64_t size);
 
 int sys_readdir(const char *path, void *buffer, uint64_t max_entries);
 
+int sys_create(const char *path);
+
+int sys_mkdir(const char *path);
+
 #endif
