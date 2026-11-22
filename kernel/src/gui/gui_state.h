@@ -14,4 +14,7 @@ extern uint32_t g_compositor_interval;
 extern uint32_t g_terminal_theme_color;
 extern bool g_gui_active;
 
+void gui_set_theme(int theme_id);
+int gui_get_theme(void);
+
 #endif

@@ -6,6 +6,7 @@
 #include "../kernel_err/errno.h"
 #include "../stdio/printf.h"
 #include "../mm/pmm.h"
+#include "../gui/gui_state.h"
 
 void syscall_dispatch(interrupt_context_t *context)
 {
@@ -79,6 +80,18 @@ void syscall_dispatch(interrupt_context_t *context)
 
         case SYS_UNLINK:
             ret = sys_unlink((const char *)arg1);
+            break;
+
+        case SYS_SET_THEME:
+            if (arg1 == (uint64_t)-1)
+            {
+                ret = gui_get_theme();
+            }
+            else
+            {
+                gui_set_theme((int)arg1);
+                ret = 0;
+            }
             break;
 
         default:

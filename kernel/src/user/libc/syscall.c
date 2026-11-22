@@ -117,6 +117,16 @@ int unlink(const char *path)
     return (int)syscall1(SYS_UNLINK, (long)path);
 }
 
+int set_theme(int theme_id)
+{
+    return (int)syscall1(SYS_SET_THEME, (long)theme_id);
+}
+
+int get_theme(void)
+{
+    return (int)syscall1(SYS_SET_THEME, -1L);
+}
+
 size_t strlen(const char *s)
 {
     size_t len = 0;

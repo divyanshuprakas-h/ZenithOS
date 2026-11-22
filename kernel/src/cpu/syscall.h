@@ -15,6 +15,7 @@
 #define SYS_CREATE  8
 #define SYS_MKDIR   9
 #define SYS_UNLINK  10
+#define SYS_SET_THEME 11
 
 typedef struct
 {

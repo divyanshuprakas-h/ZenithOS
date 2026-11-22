@@ -16,6 +16,7 @@
 #define SYS_CREATE  8
 #define SYS_MKDIR   9
 #define SYS_UNLINK  10
+#define SYS_SET_THEME 11
 
 typedef struct
 {
@@ -48,6 +49,8 @@ int readdir(const char *path, dirent_t *entries, uint64_t max_entries);
 int create(const char *path);
 int mkdir(const char *path);
 int unlink(const char *path);
+int set_theme(int theme_id);
+int get_theme(void);
 
 size_t strlen(const char *s);
 int strcmp(const char *s1, const char *s2);

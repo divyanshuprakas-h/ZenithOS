@@ -360,6 +360,7 @@ static void cmd_help(void)
     println("  unalias <name>    - Remove an alias");
     println("  env               - List environment variables");
     println("  export KEY=VALUE  - Set environment variable (e.g. PS1)");
+    println("  theme [name]      - Get or switch desktop theme (matrix, nord, amber, etc.)");
     println("  echo <text>       - Print text ($VAR supported)");
     println("  history           - Show command history");
     println("  free / mem        - Display memory usage");
@@ -402,6 +403,62 @@ static void cmd_uptime(void)
     sysinfo_t info;
     sysinfo(&info);
     println("ZenithOS up and running (Ring 3 User Mode, 100 Hz PIT timer)");
+}
+
+static void cmd_theme(const char *arg)
+{
+    while (*arg == ' ') arg++;
+
+    if (*arg == '\0' || strcmp(arg, "list") == 0)
+    {
+        int cur = get_theme();
+        const char *names[5] = {"Dark / Slate", "Matrix Green", "Arctic Nord", "Amber Retro CRT", "Cyberpunk Neon"};
+        print("Current Theme: [");
+        if (cur >= 0 && cur < 5)
+            print(names[cur]);
+        else
+            print("Custom");
+        println("]");
+        println("Available themes:");
+        println("  0 or dark      - Default Dark Slate & Sky Blue");
+        println("  1 or matrix    - Hacker Emerald & Deep Matrix Green");
+        println("  2 or nord      - Arctic Blue & Slate Frost");
+        println("  3 or amber     - Vintage Amber & CRT Glow");
+        println("  4 or cyberpunk - Neon Pink & Synthwave Purple");
+        return;
+    }
+
+    if (strcmp(arg, "0") == 0 || strcmp(arg, "dark") == 0)
+    {
+        set_theme(0);
+        println("[THEME] Switched desktop & system to Dark Slate");
+    }
+    else if (strcmp(arg, "1") == 0 || strcmp(arg, "matrix") == 0)
+    {
+        set_theme(1);
+        println("[THEME] Switched desktop & system to Matrix Green");
+    }
+    else if (strcmp(arg, "2") == 0 || strcmp(arg, "nord") == 0)
+    {
+        set_theme(2);
+        println("[THEME] Switched desktop & system to Arctic Nord");
+    }
+    else if (strcmp(arg, "3") == 0 || strcmp(arg, "amber") == 0)
+    {
+        set_theme(3);
+        println("[THEME] Switched desktop & system to Amber Retro CRT");
+    }
+    else if (strcmp(arg, "4") == 0 || strcmp(arg, "cyberpunk") == 0 || strcmp(arg, "neon") == 0)
+    {
+        set_theme(4);
+        println("[THEME] Switched desktop & system to Cyberpunk Neon");
+    }
+    else
+    {
+        print("theme: unknown theme '");
+        print(arg);
+        println("'. Type 'theme list' for options.");
+    }
 }
 
 static void cmd_pwd(void)
@@ -1216,6 +1273,10 @@ int main(void)
         else if (strncmp(cmd, "export", 6) == 0 && (cmd[6] == ' ' || cmd[6] == '\0'))
         {
             cmd_export(cmd + 6);
+        }
+        else if (strncmp(cmd, "theme", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
+        {
+            cmd_theme(cmd + 5);
         }
         else if (strncmp(cmd, "alias", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
         {
