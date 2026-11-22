@@ -150,18 +150,8 @@ static task_t *scheduler_switch_to(task_t *next)
 
     if (next != NULL)
     {
-        static uint64_t last_rsp0 = 0;
-
         uint64_t rsp0 = (uint64_t) next->kernel_stack + next->kernel_stack_size;
-
-        if (rsp0 != last_rsp0)
-        {
-            last_rsp0 = rsp0;
-            kprintf("[TSS] RSP0 = %p\n", (void *)rsp0);
-        }
-
         tss_set_rsp0(rsp0);
-
     }
 
     current_task = next;
@@ -472,8 +462,6 @@ static void *scheduler_build_context_interrupt_rsp(task_t *task)
 
     if (is_user)
     {
-        kprintf("[SCHED] Building USER interrupt frame\n");
-
         user_interrupt_frame_t *frame = (user_interrupt_frame_t *)
                                         ((uint8_t *)(uintptr_t)task->context.rsp - sizeof(user_interrupt_frame_t));
 
@@ -488,17 +476,8 @@ static void *scheduler_build_context_interrupt_rsp(task_t *task)
         frame->cs = USER_CODE_SELECTOR | 3;
         frame->ss = USER_DATA_SELECTOR | 3;
 
-        kprintf("[USER] RIP = %p\n", (void *)frame->rip);
-        kprintf("[USER] RSP = %p\n", (void *)frame->rsp);
-        kprintf("[USER] CS  = 0x%llx\n", (unsigned long long)frame->cs);
-        kprintf("[USER] SS  = 0x%llx\n", (unsigned long long)frame->ss);
-
         return frame;
 
-    }
-    else
-    {
-        kprintf("[SCHED] Building KERNEL interrupt frame\n");
     }
 
     kernel_interrupt_frame_t *frame =
@@ -595,16 +574,12 @@ void *scheduler_get_next_interrupt_rsp(void)
     {
         if (!next->process->user_started)
         {
-            kprintf("[SCHED] First USER execution\n");
-
             next->process->user_started = true;
 
             next_interrupt_rsp = scheduler_build_context_interrupt_rsp(next);
         }
         else
         {
-            kprintf("[SCHED] Resume USER process\n");
-
             next_interrupt_rsp = next->interrupt_rsp;
         }
     }

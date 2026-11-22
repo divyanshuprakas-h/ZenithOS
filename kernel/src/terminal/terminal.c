@@ -5,6 +5,7 @@
 #include "terminal_buffer.h"
 #include "../hal/io.h"
 #include "../cpu/interrupts.h"
+#include "../gui/gui_state.h"
 
 static size_t cursor_row = 0;
 static size_t cursor_col = 0;
@@ -240,6 +241,18 @@ void terminal_render(void)
             );
         }
     }
+
+    /* Draw clear terminal cursor bar */
+    if (cursor_row < TERM_ROWS && cursor_col < TERM_COLS)
+    {
+        fill_rect(
+            terminal_origin_x + cursor_col * 16,
+            terminal_origin_y + cursor_row * 16 + 13,
+            12,
+            3,
+            0x38BDF8
+        );
+    }
 }
 
 bool terminal_stdin_has_data(void)
@@ -309,6 +322,7 @@ void terminal_handle_key(char c)
 
         line_len = 0;
         interrupt_restore(irq_was_enabled);
+        gui_needs_redraw = true;
         return;
     }
 
@@ -320,6 +334,7 @@ void terminal_handle_key(char c)
             terminal_putchar(c);
             outb(0xE9, (uint8_t)c);
             terminal_render();
+            gui_needs_redraw = true;
         }
         return;
     }

@@ -62,5 +62,6 @@ void keyboard_handler(void)
             }
         }
         terminal_handle_key(c);
+        gui_needs_redraw = true;
     }
 }

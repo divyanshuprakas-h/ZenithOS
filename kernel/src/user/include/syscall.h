@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #define SYS_EXIT    0
 #define SYS_OPEN    1
@@ -11,6 +12,7 @@
 #define SYS_CLOSE   4
 #define SYS_YIELD   5
 #define SYS_SYSINFO 6
+#define SYS_READDIR 7
 
 typedef struct
 {
@@ -19,6 +21,13 @@ typedef struct
     uint64_t used_pages;
     uint64_t page_size;
 } sysinfo_t;
+
+typedef struct
+{
+    char name[64];
+    uint32_t type; // 0 = file, 1 = directory
+    uint64_t size;
+} dirent_t;
 
 long syscall0(long number);
 long syscall1(long number, long arg1);
@@ -32,10 +41,13 @@ int close(int fd);
 void exit(int status);
 void yield(void);
 int sysinfo(sysinfo_t *info);
+int readdir(const char *path, dirent_t *entries, uint64_t max_entries);
 
 size_t strlen(const char *s);
 int strcmp(const char *s1, const char *s2);
 int strncmp(const char *s1, const char *s2, size_t n);
+char *strcpy(char *dest, const char *src);
+char *strcat(char *dest, const char *src);
 void print(const char *str);
 void println(const char *str);
 void print_num(uint64_t n);

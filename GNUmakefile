@@ -162,6 +162,8 @@ kernel: kernel/.deps-obtained
 	cp kernel/src/user/init.elf initramfs/bin/init
 	printf "Welcome to ZenithOS!\nA visual 64-bit operating system crafted for clarity and creative hacking.\n" > initramfs/readme.txt
 	printf "NAME=ZenithOS\nVERSION=0.1.0-alpha\nARCH=x86_64\n" > initramfs/etc/os-release
+	printf "zenithos\n" > initramfs/etc/hostname
+	printf "root:x:0:0:root:/root:/bin/init\nzenith:x:1000:1000:zenith:/home/zenith:/bin/init\n" > initramfs/etc/passwd
 	COPYFILE_DISABLE=1 tar --format=ustar -cf initramfs.tar -C initramfs .
 	$(MAKE) -C kernel TOOLCHAIN=llvm LD=/opt/homebrew/bin/ld.lld
 

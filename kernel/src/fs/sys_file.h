@@ -11,4 +11,6 @@ int sys_read(int fd, void *buffer, uint64_t size);
 
 int sys_write(int fd, void *buffer, uint64_t size);
 
+int sys_readdir(const char *path, void *buffer, uint64_t max_entries);
+
 #endif

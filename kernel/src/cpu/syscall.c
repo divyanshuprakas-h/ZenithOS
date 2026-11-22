@@ -65,6 +65,10 @@ void syscall_dispatch(interrupt_context_t *context)
             }
             break;
 
+        case SYS_READDIR:
+            ret = sys_readdir((const char *)arg1, (void *)arg2, arg3);
+            break;
+
         default:
             kprintf("[SYSCALL] Unknown syscall: %llu\n", (unsigned long long)syscall_num);
             ret = -KERNEL_EINVAL;

@@ -11,6 +11,7 @@
 #define SYS_CLOSE   4
 #define SYS_YIELD   5
 #define SYS_SYSINFO 6
+#define SYS_READDIR 7
 
 typedef struct
 {

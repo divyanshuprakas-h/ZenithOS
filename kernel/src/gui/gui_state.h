@@ -12,5 +12,6 @@ extern uint32_t g_gui_bg_top;
 extern uint32_t g_gui_bg_bottom;
 extern uint32_t g_compositor_interval;
 extern uint32_t g_terminal_theme_color;
+extern bool g_gui_active;
 
 #endif
