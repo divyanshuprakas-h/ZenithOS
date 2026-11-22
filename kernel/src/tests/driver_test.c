@@ -1,28 +1,18 @@
 #include "tests.h"
 
 #include "../terminal/terminal.h"
-
-#include "../hal/apic.h"
-#include "../hal/pic.h"
-
-#include "../drivers/keyboard.h"
-#include "../drivers/mouse.h"
+#include "../drivers/serial.h"
 
 void driver_tests(void)
 {
-    terminal_write("\n------------ DRIVER TESTS ------------\n");
+    terminal_write("  [TEST] Running Driver tests...\n");
 
-    apic_disable();
-    terminal_write("APIC OK\n");
+    // COM1 Serial driver assertions
+    TEST_ASSERT(serial_is_present());
 
-    pic_init();
-    terminal_write("PIC OK\n");
-
-    keyboard_init();
-    terminal_write("Keyboard OK\n");
-
-    mouse_init();
-    terminal_write("Mouse OK\n");
-
-    terminal_write("DRIVER TESTS PASSED\n");
+    serial_status_t status;
+    serial_get_status(&status);
+    TEST_ASSERT(status.is_online);
+    TEST_ASSERT(status.port == COM1_PORT);
+    TEST_ASSERT(status.baud_rate == 115200);
 }

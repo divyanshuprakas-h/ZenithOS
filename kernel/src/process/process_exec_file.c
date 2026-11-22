@@ -8,7 +8,6 @@
 #include "../mm/heap.h"
 #include "../lib/memory.h"
 
-
 #include <stddef.h>
 
 int process_exec_file(const char *path, process_t **process)
@@ -16,76 +15,52 @@ int process_exec_file(const char *path, process_t **process)
     if (process == NULL || path == NULL)
         return KERNEL_EINVAL;
 
-    kprintf("[EXEC] STEP 1\n");
-
-    *process = process_create_empty("init");
-
-    if (*process == NULL)
-        return KERNEL_ENOMEM;
-
-    file_t *file;
-
+    file_t *file = NULL;
     int open_status = vfs_open(path, &file);
-    kprintf("[EXEC] STEP 2 file=%p status=%d\n", file, open_status);
-
     if (open_status != KERNEL_SUCCESS)
     {
-        kprintf("[EXEC] Failed to open %s (%d)\n", path, open_status);
         return open_status;
     }
 
-    kprintf("[EXEC] Opened %s\n", path);
-    kprintf("[EXEC] STEP 3\n");
+    size_t file_size = (file->node != NULL) ? file->node->size : 0;
+    if (file_size < sizeof(elf64_header_t) || file_size > 16 * 1024 * 1024)
+    {
+        vfs_close(file);
+        return KERNEL_EINVAL;
+    }
 
-    #define EXEC_BUFFER_SIZE 32768
-
-    void *buffer = kmalloc(EXEC_BUFFER_SIZE);
-
+    void *buffer = kmalloc(file_size);
     if (buffer == NULL)
     {
-        file_close(file);
+        vfs_close(file);
         return KERNEL_ENOMEM;
     }
 
-    k_memset(buffer, 0, EXEC_BUFFER_SIZE);
+    int bytes = vfs_read(file, buffer, file_size);
+    vfs_close(file);
 
-    int bytes = vfs_read(file, buffer, EXEC_BUFFER_SIZE);
-
-    if (bytes < 0)
+    if (bytes < 0 || (size_t)bytes < file_size)
     {
-        kprintf("[EXEC] Read failed (%d)\n", bytes);
-
         kfree(buffer);
-        file_close(file);
-
-        return bytes;
+        return bytes < 0 ? bytes : KERNEL_EIO;
     }
 
-    kprintf("[EXEC] Read %d bytes\n", bytes);
-    kprintf("[EXEC] STEP 4 bytes=%d\n", bytes);
+    *process = process_create_empty("init");
+    if (*process == NULL)
+    {
+        kfree(buffer);
+        return KERNEL_ENOMEM;
+    }
 
-    int status = process_exec(*process, buffer);
+    int status = process_exec(*process, buffer, file_size);
+    kfree(buffer);
 
     if (status != KERNEL_SUCCESS)
     {
-        kprintf("[EXEC] process_exec() failed (%d)\n", status);
-
-        kfree(buffer);
-        file_close(file);
-
+        process_destroy(*process);
+        *process = NULL;
         return status;
     }
-
-    kprintf("[EXEC] process_exec OK\n");
-    kprintf("[EXEC] process RIP = 0x%llx\n", (unsigned long long)(*process)->user_rip);
-
-    kprintf("[EXEC] Image loaded successfully\n");
-    kprintf("[EXEC] STEP 5 status=%d\n", status);
-
-    file_close(file);
-    kprintf("[EXEC] Closed file\n");
-    kprintf("[EXEC] STEP 6\n");
-    kfree(buffer);
 
     return KERNEL_SUCCESS;
 }
