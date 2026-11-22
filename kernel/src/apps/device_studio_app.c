@@ -40,6 +40,7 @@ static size_t s_input_len = 0;
 // Streaming byte assembler
 static char s_rx_line_buf[128];
 static size_t s_rx_line_len = 0;
+static bool s_rx_line_overflow = false;
 
 // Simulation timer
 static uint64_t s_last_sim_tick = 0;
@@ -220,6 +221,12 @@ void device_studio_poll(void)
 {
     bool updated = false;
 
+    // Note on shared serial buffer limitation:
+    // COM1 UART and the kernel's circular RX buffer are globally shared.
+    // Reading from Device Studio (serial_read_bytes) or from the Ring 3 shell (/dev/ttyS0)
+    // drains the same shared ring buffer. For uninterrupted telemetry stream inspection,
+    // ensure concurrent shell serial read commands are not running.
+
     // 1. Drain incoming serial data without blocking
     if (serial_is_present() && serial_available() > 0)
     {
@@ -230,12 +237,19 @@ void device_studio_poll(void)
             char c = temp[i];
             if (c == '\r' || c == '\n')
             {
-                if (s_rx_line_len > 0)
+                if (s_rx_line_overflow)
+                {
+                    device_studio_append_console("[SERIAL RX ERROR] Overlong line (>127 chars) dropped", 0xEF4444);
+                    s_rx_line_len = 0;
+                    s_rx_line_overflow = false;
+                    updated = true;
+                }
+                else if (s_rx_line_len > 0)
                 {
                     s_rx_line_buf[s_rx_line_len] = '\0';
 
                     // Check if telemetry protocol line `#Z1,`
-                    if (s_rx_line_len >= 4 && s_rx_line_buf[0] == '#' && s_rx_line_buf[1] == 'Z' && s_rx_line_buf[2] == '1')
+                    if (s_rx_line_len >= 4 && s_rx_line_buf[0] == '#' && s_rx_line_buf[1] == 'Z' && s_rx_line_buf[2] == '1' && s_rx_line_buf[3] == ',')
                     {
                         if (telemetry_parse_line(s_rx_line_buf, s_rx_line_len))
                         {
@@ -243,7 +257,7 @@ void device_studio_poll(void)
                         }
                         else
                         {
-                            device_studio_append_console(s_rx_line_buf, 0xEF4444);
+                            device_studio_append_console("[TELEMETRY ERROR] Malformed #Z1 packet dropped", 0xEF4444);
                         }
                     }
                     else
@@ -255,11 +269,18 @@ void device_studio_poll(void)
                     updated = true;
                 }
             }
-            else if (s_rx_line_len < sizeof(s_rx_line_buf) - 1)
+            else
             {
-                if (c >= 32 && c <= 126)
+                if (s_rx_line_len < sizeof(s_rx_line_buf) - 1)
                 {
-                    s_rx_line_buf[s_rx_line_len++] = c;
+                    if (c >= 32 && c <= 126)
+                    {
+                        s_rx_line_buf[s_rx_line_len++] = c;
+                    }
+                }
+                else
+                {
+                    s_rx_line_overflow = true;
                 }
             }
         }
