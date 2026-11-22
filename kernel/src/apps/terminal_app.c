@@ -6,11 +6,11 @@
 #include "../terminal/terminal.h"
 
 static Window terminal_window = {
-    .x = 150,
-    .y = 80,
+    .x = 120,
+    .y = 70,
 
-    .width = 900,
-    .height = 600,
+    .width = 832,
+    .height = 452,
 
     .visible = true,
     .focused = true,
@@ -21,34 +21,20 @@ static Window terminal_window = {
     .dragging = false,
     .resizing = false,
 
-    .title = "Terminal",
+    .title = "ZenithOS Terminal - Ring 3",
 
     .draw_content = terminal_app_draw
 };
 
 void terminal_app_init(void)
 {
-    terminal_init();
-
-    terminal_write("ZenithOS Terminal v0.1\n\n");
-    terminal_write("Type \"help\" to begin\n\n");
-
-    terminal_set_color(0x22C55E);
-    terminal_write("$");
-
-    terminal_set_color(0xFFFFFF);
-
+    terminal_set_origin(terminal_window.x + 16, terminal_window.y + 36);
+    terminal_clear();
     window_manager_add(&terminal_window);
-
 }
 
 void terminal_app_draw(Window *window)
 {
-
-    terminal_set_origin(
-        window->x + 20,
-        window->y + 40
-    );
-
+    terminal_set_origin(window->x + 16, window->y + 36);
     terminal_render();
 }

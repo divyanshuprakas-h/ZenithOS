@@ -385,10 +385,18 @@ void kmain(void)
     kprintf("[TRACE] kernel_tests() begin\n");
     kernel_tests();
     kprintf("[TRACE] kernel_tests() end\n");
-    // scheduler_run_sleep_test();
 
-    kprintf("[TRACE] kernel_tests() end\n");
+    /* ----------------------------------------------------
+     * Initialize GUI & Desktop Environment
+     * ---------------------------------------------------- */
+    gui_init();
+    terminal_app_init();
+    desktop_init();
+    desktop_draw();
 
+    /* ----------------------------------------------------
+     * Launch /bin/init in Ring 3 User Mode
+     * ---------------------------------------------------- */
     process_t *init_process = NULL;
 
     int rc = process_exec_file("/bin/init", &init_process);
@@ -407,38 +415,19 @@ void kmain(void)
 
     kprintf("[BOOT] init process created (pid=%u)\n", init_process->pid);
 
-    scheduler_yield();
-
-    __asm__ volatile("cli");
-
-    // kprintf("[TRACE] scheduler_mutex_test() begin\n");
-    // scheduler_mutex_test();
-    // kprintf("[TRACE] scheduler_mutex_test() returned\n");
-
     /* ----------------------------------------------------
-     * GUI (Enable Later)
+     * Desktop Compositor Loop (Task 0)
      * ---------------------------------------------------- */
-
-    /*
-    gui_init();
-
-    terminal_app_init();
-
-    desktop_init();
-
-    desktop_draw();
-
     while (1)
     {
         if (gui_needs_redraw)
         {
-            desktop_draw();
             gui_needs_redraw = false;
+            desktop_draw();
         }
 
-        __asm__ volatile("hlt");
+        scheduler_yield();
     }
-    */
 
     hcf();
 }

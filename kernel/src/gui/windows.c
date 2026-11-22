@@ -58,7 +58,7 @@ void window_draw(
     );
 }
 
-#define TITLEBAR_HEIGHT 24
+#define TITLEBAR_HEIGHT 32
 
 bool window_in_titlebar(Window *window, int x, int y)
 {

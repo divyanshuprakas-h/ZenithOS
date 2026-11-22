@@ -17,6 +17,11 @@ void framebuffer_putpixel(
     uint32_t color
 );
 
+uint32_t framebuffer_getpixel(
+    size_t x,
+    size_t y
+);
+
 void framebuffer_clear(uint32_t color);
 
 void *framebuffer_address(void);
