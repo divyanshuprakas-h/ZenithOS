@@ -25,6 +25,17 @@ static uint32_t terminal_color = 0xFFFFFF;
 
 static int terminal_origin_x = 0;
 static int terminal_origin_y = 0;
+static bool terminal_visible_flag = true;
+
+void terminal_set_visible(bool visible)
+{
+    terminal_visible_flag = visible;
+}
+
+bool terminal_is_visible(void)
+{
+    return terminal_visible_flag;
+}
 
 static void terminal_scroll(void)
 {
@@ -199,6 +210,11 @@ void terminal_set_color(uint32_t color)
 
 void terminal_render(void)
 {
+    if (!terminal_visible_flag)
+    {
+        return;
+    }
+
     fill_rect(
         terminal_origin_x,
         terminal_origin_y,
