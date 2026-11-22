@@ -32,3 +32,34 @@ char *k_strcpy(char *dest , const char *src)
     return start;
 }
 
+char *k_strncpy(char *dest, const char *src, size_t n)
+{
+    char *start = dest;
+    size_t i = 0;
+
+    for (; i < n && src[i] != '\0'; i++)
+    {
+        dest[i] = src[i];
+    }
+    for (; i < n; i++)
+    {
+        dest[i] = '\0';
+    }
+
+    return start;
+}
+
+char *k_strcat(char *dest, const char *src)
+{
+    char *start = dest;
+
+    while (*dest != '\0')
+    {
+        dest++;
+    }
+    while ((*dest++ = *src++) != '\0');
+
+    return start;
+}
+
+

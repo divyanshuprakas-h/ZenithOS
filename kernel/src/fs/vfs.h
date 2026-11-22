@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
 #include "vnode.h"
 #include "file.h"
 
@@ -19,5 +21,16 @@ int vfs_open(const char *path, file_t **result);
 
 int vfs_write(file_t *file, const void *buffer, uint64_t size);
 
+typedef struct {
+    char name[64];
+    vnode_type_t type;
+    uint64_t size;
+} vfs_dirent_t;
+
+int vfs_read_dir(const char *path, vfs_dirent_t *entries, size_t max_entries, size_t *out_count);
+
 int vfs_read(file_t *file, void *buffer, uint64_t size);
+
+int vfs_close(file_t *file);
+
 

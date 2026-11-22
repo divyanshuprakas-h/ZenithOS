@@ -28,8 +28,12 @@
 #include "cpu/exceptions_test.h"
 
 #include "gui/gui.h"
+#include "gui/app_manager.h"
+#include "apps/launcher_app.h"
 #include "apps/terminal_app.h"
+#include "apps/files_app.h"
 #include "apps/sysmon_app.h"
+#include "apps/settings_app.h"
 #include "gui/desktop.h"
 #include "gui/gui_state.h"
 
@@ -217,6 +221,29 @@ static void pmm_run_tests(void)
 
 // static uint8_t kernel_heap[1024 * 1024];
 
+static void compositor_task(void)
+{
+    uint64_t last_stats_tick = pit_ticks();
+
+    while (1)
+    {
+        uint64_t now = pit_ticks();
+        if (now - last_stats_tick >= g_compositor_interval)
+        {
+            last_stats_tick = now;
+            gui_needs_redraw = true;
+        }
+
+        if (gui_needs_redraw)
+        {
+            gui_needs_redraw = false;
+            desktop_draw();
+        }
+
+        scheduler_yield();
+    }
+}
+
 void kmain(void)
 {
     __asm__ volatile("cli");
@@ -391,8 +418,12 @@ void kmain(void)
      * Initialize GUI & Desktop Environment
      * ---------------------------------------------------- */
     gui_init();
+    app_manager_init();
     terminal_app_init();
+    files_app_init();
     sysmon_app_init();
+    settings_app_init();
+    launcher_app_init();
     desktop_init();
     desktop_draw();
 
@@ -418,25 +449,16 @@ void kmain(void)
     kprintf("[BOOT] init process created (pid=%u)\n", init_process->pid);
 
     /* ----------------------------------------------------
-     * Desktop Compositor Loop (Task 0)
+     * Desktop Compositor Task
      * ---------------------------------------------------- */
-    uint64_t last_stats_tick = pit_ticks();
+    task_t *comp_task = task_create(compositor_task);
+    if (comp_task != NULL)
+    {
+        scheduler_add_task(comp_task);
+    }
 
     while (1)
     {
-        uint64_t now = pit_ticks();
-        if (now - last_stats_tick >= 100)
-        {
-            last_stats_tick = now;
-            gui_needs_redraw = true;
-        }
-
-        if (gui_needs_redraw)
-        {
-            gui_needs_redraw = false;
-            desktop_draw();
-        }
-
         scheduler_yield();
     }
 

@@ -1,6 +1,7 @@
 #include "window_manager.h"
 #include "gui_state.h"
 #include "theme.h"
+#include "../stdio/printf.h"
 #include "../framebuffer/framebuffer.h"
 #include <stddef.h>
 
@@ -39,7 +40,10 @@ void window_manager_add(Window *window)
     }
 
     windows[window_count++] = window;
-    window_manager_focus(window);
+    if (window->visible)
+    {
+        window_manager_focus(window);
+    }
 }
 
 void window_manager_draw(void)
@@ -260,6 +264,10 @@ bool window_manager_mouse_down(int x, int y)
         window->dragging = true;
         window->drag_offset_x = x - window->x;
         window->drag_offset_y = y - window->y;
+    }
+    else if (window->handle_mouse_down != NULL)
+    {
+        window->handle_mouse_down(window, x, y);
     }
 
     gui_needs_redraw = true;

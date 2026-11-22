@@ -2,10 +2,12 @@
 #include "mount.h"
 #include "filesystem.h"
 #include "vnode.h"
+#include "ramfs.h"
 #include "path.h"
 
 #include "kernel_err/errno.h"
 #include "../mm/heap.h"
+#include "../lib/string.h"
 
 #include <stddef.h>
 
@@ -183,4 +185,57 @@ int vfs_read(file_t *file, void *buffer, uint64_t size)
         return KERNEL_ENOTSUP;
 
     return file->node->ops->read(file, buffer, size);
+}
+
+int vfs_read_dir(const char *path, vfs_dirent_t *entries, size_t max_entries, size_t *out_count)
+{
+    if (path == NULL || entries == NULL || out_count == NULL || max_entries == 0)
+    {
+        return KERNEL_EINVAL;
+    }
+
+    *out_count = 0;
+
+    vnode_t *dir = NULL;
+    int rc = vfs_lookup(path, &dir);
+    if (rc != KERNEL_SUCCESS)
+    {
+        return rc;
+    }
+
+    if (dir->type != VNODE_DIRECTORY)
+    {
+        return KERNEL_ENOTSUP;
+    }
+
+    ramfs_node_t *rnode = (ramfs_node_t *)dir->private_data;
+    if (rnode == NULL)
+    {
+        return KERNEL_EINVAL;
+    }
+
+    size_t count = 0;
+    for (uint32_t i = 0; i < rnode->child_count && count < max_entries; i++)
+    {
+        ramfs_node_t *child = rnode->children[i];
+        if (child == NULL)
+            continue;
+
+        k_strcpy(entries[count].name, child->vnode.name);
+        entries[count].type = child->vnode.type;
+        entries[count].size = child->vnode.size;
+        count++;
+    }
+
+    *out_count = count;
+    return KERNEL_SUCCESS;
+}
+
+int vfs_close(file_t *file)
+{
+    if (file == NULL)
+        return KERNEL_EINVAL;
+
+    file_close(file);
+    return KERNEL_SUCCESS;
 }
