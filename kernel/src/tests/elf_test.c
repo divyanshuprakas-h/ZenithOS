@@ -12,6 +12,7 @@ typedef struct
 {
     elf64_header_t header;
     elf64_program_header_t ph[2];
+    uint8_t payload[8192];
 } fake_elf_t;
 
 void elf_test(void)
@@ -26,21 +27,16 @@ void elf_test(void)
 
     elf.header.e_ident[4] = ELFCLASS64;
     elf.header.e_ident[5] = ELFDATA2LSB;
+    elf.header.e_ident[6] = EV_CURRENT;
 
     elf.header.e_version = EV_CURRENT;
-
     elf.header.e_type = ET_EXEC;
-
     elf.header.e_machine = EM_X86_64;
-
     elf.header.e_entry = 0x400000;
-
+    elf.header.e_ehsize = sizeof(elf64_header_t);
     elf.header.e_phoff = sizeof(elf64_header_t);
-
     elf.header.e_phnum = 2;
-
     elf.header.e_phentsize = sizeof(elf64_program_header_t);
-
 
     elf.ph[0].p_type = PT_LOAD;
     elf.ph[0].p_offset = 0;
@@ -56,14 +52,14 @@ void elf_test(void)
     elf.ph[1].p_memsz = 4096;
     elf.ph[1].p_flags = PF_R | PF_W;
 
-    if (elf_validate(&elf.header) == KERNEL_SUCCESS)
+    if (elf_validate(&elf.header, sizeof(fake_elf_t)) == KERNEL_SUCCESS)
         kprintf("[PASS] ELF validation\n");
     else
         kprintf("[FAIL] ELF validation\n");
 
     for (uint16_t i = 0; i < elf.header.e_phnum; i++)
     {
-        const elf64_program_header_t *ph = elf_program_header(&elf.header, i);
+        const elf64_program_header_t *ph = elf_program_header(&elf.header, i, sizeof(fake_elf_t));
 
         if (ph == NULL)
         {
@@ -76,7 +72,6 @@ void elf_test(void)
         kprintf("VAddr=0x%llx\n", (unsigned long long)ph->p_vaddr);
         kprintf("File=%llu\n", (unsigned long long)ph->p_filesz);
         kprintf("Mem=%llu\n", (unsigned long long)ph->p_memsz);
-
     }
 
     elf_print_header(&elf.header);
@@ -85,7 +80,7 @@ void elf_test(void)
 
     elf_image_t image;
 
-    if (elf_load_image(&elf, &image) == KERNEL_SUCCESS)
+    if (elf_load_image(&elf, sizeof(fake_elf_t), &image) == KERNEL_SUCCESS)
     {
         kprintf("[PASS] ELF Loader\n");
         kprintf("Entry = 0x%llx\n", (unsigned long long)image.entry);
@@ -99,23 +94,16 @@ void elf_test(void)
     kprintf("Entry      = 0x%llx\n", (unsigned long long)image.entry);
 
     process_t *proc = NULL;
-
     int ret = process_exec_file("/bin/init", &proc);
 
     if (ret == KERNEL_SUCCESS)
     {
         kprintf("[PASS] process_exec_file\n");
-
-        kprintf("Entry : 0x%llx\n",
-                (unsigned long long)proc->image.entry);
-
-        kprintf("Base  : 0x%llx\n",
-                (unsigned long long)proc->image.image_base);
+        kprintf("Entry : 0x%llx\n", (unsigned long long)proc->image.entry);
+        kprintf("Base  : 0x%llx\n", (unsigned long long)proc->image.image_base);
     }
     else
     {
         kprintf("[FAIL] process_exec_file %u\n", ret);
     }
-
 }
-

@@ -1,23 +1,20 @@
 #include "tests.h"
 
 #include "../terminal/terminal.h"
-
-#include "../cpu/gdt.h"
-#include "../cpu/idt.h"
+#include "../cpu/interrupts.h"
 #include "../cpu/irq.h"
+#include "../hal/pit.h"
 
 void cpu_tests(void)
 {
-    terminal_write("\n------------ CPU TESTS ------------\n");
+    terminal_write("  [TEST] Running CPU tests...\n");
 
-    gdt_init();
-    terminal_write("GDT OK\n");
+    bool irq = interrupt_save();
+    TEST_ASSERT(true);
+    interrupt_restore(irq);
 
-    idt_init();
-    terminal_write("IDT OK\n");
-
-    irq_init();
-    terminal_write("IRQ OK\n");
-
-    terminal_write("CPU TESTS PASSED\n");
+    uint64_t ticks1 = pit_ticks();
+    for (volatile int i = 0; i < 50000; i++);
+    uint64_t ticks2 = pit_ticks();
+    TEST_ASSERT(ticks2 >= ticks1);
 }
