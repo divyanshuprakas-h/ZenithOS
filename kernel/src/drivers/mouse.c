@@ -164,13 +164,5 @@ void mouse_handler(void)
         window_manager_mouse_move(mouse_state.x, mouse_state.y);
     }
 
-    if (gui_needs_redraw)
-    {
-        gui_needs_redraw = false;
-        desktop_draw();
-    }
-    else
-    {
-        cursor_move(mouse_state.x, mouse_state.y);
-    }
+    cursor_move(mouse_state.x, mouse_state.y);
 }

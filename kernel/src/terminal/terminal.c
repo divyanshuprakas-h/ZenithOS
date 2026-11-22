@@ -322,7 +322,6 @@ void terminal_handle_key(char c)
 
         line_len = 0;
         interrupt_restore(irq_was_enabled);
-        gui_needs_redraw = true;
         return;
     }
 
@@ -334,7 +333,6 @@ void terminal_handle_key(char c)
             terminal_putchar(c);
             outb(0xE9, (uint8_t)c);
             terminal_render();
-            gui_needs_redraw = true;
         }
         return;
     }

@@ -85,7 +85,6 @@ int sys_write(int fd, void *buffer, uint64_t size)
             outb(0xE9, (uint8_t)buf[i]);
         }
         terminal_render();
-        gui_needs_redraw = true;
         return (int)size;
     }
 
