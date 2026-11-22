@@ -168,6 +168,17 @@ char *strcat(char *dest, const char *src)
     return dest;
 }
 
+char *strchr(const char *s, int c)
+{
+    while (*s != '\0')
+    {
+        if (*s == (char)c)
+            return (char *)s;
+        s++;
+    }
+    return (c == '\0') ? (char *)s : NULL;
+}
+
 void print(const char *str)
 {
     if (str != NULL)

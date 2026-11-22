@@ -52,6 +52,7 @@ int strcmp(const char *s1, const char *s2);
 int strncmp(const char *s1, const char *s2, size_t n);
 char *strcpy(char *dest, const char *src);
 char *strcat(char *dest, const char *src);
+char *strchr(const char *s, int c);
 void print(const char *str);
 void println(const char *str);
 void print_num(uint64_t n);

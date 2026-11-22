@@ -2,6 +2,164 @@
 
 static char s_cwd[128] = "/";
 
+/* ----------------------------------------------------
+ * Environment Variables Store
+ * ---------------------------------------------------- */
+#define MAX_ENV 16
+typedef struct {
+    char key[32];
+    char val[64];
+    bool active;
+} env_var_t;
+
+static env_var_t s_env[MAX_ENV];
+
+static void env_init(void)
+{
+    for (int i = 0; i < MAX_ENV; i++)
+    {
+        s_env[i].active = false;
+    }
+
+    strcpy(s_env[0].key, "USER");
+    strcpy(s_env[0].val, "zenith");
+    s_env[0].active = true;
+
+    strcpy(s_env[1].key, "HOST");
+    strcpy(s_env[1].val, "zenithos");
+    s_env[1].active = true;
+
+    strcpy(s_env[2].key, "HOME");
+    strcpy(s_env[2].val, "/");
+    s_env[2].active = true;
+
+    strcpy(s_env[3].key, "SHELL");
+    strcpy(s_env[3].val, "/bin/init");
+    s_env[3].active = true;
+
+    strcpy(s_env[4].key, "TERM");
+    strcpy(s_env[4].val, "zenith-term");
+    s_env[4].active = true;
+}
+
+static const char *env_get(const char *key)
+{
+    for (int i = 0; i < MAX_ENV; i++)
+    {
+        if (s_env[i].active && strcmp(s_env[i].key, key) == 0)
+        {
+            return s_env[i].val;
+        }
+    }
+    return "";
+}
+
+static void env_set(const char *key, const char *val)
+{
+    // Update existing
+    for (int i = 0; i < MAX_ENV; i++)
+    {
+        if (s_env[i].active && strcmp(s_env[i].key, key) == 0)
+        {
+            strcpy(s_env[i].val, val);
+            return;
+        }
+    }
+
+    // Allocate new
+    for (int i = 0; i < MAX_ENV; i++)
+    {
+        if (!s_env[i].active)
+        {
+            strcpy(s_env[i].key, key);
+            strcpy(s_env[i].val, val);
+            s_env[i].active = true;
+            return;
+        }
+    }
+}
+
+static void cmd_env(void)
+{
+    for (int i = 0; i < MAX_ENV; i++)
+    {
+        if (s_env[i].active)
+        {
+            print(s_env[i].key);
+            print("=");
+            println(s_env[i].val);
+        }
+    }
+}
+
+static void cmd_export(const char *arg)
+{
+    while (*arg == ' ') arg++;
+
+    if (*arg == '\0')
+    {
+        cmd_env();
+        return;
+    }
+
+    char *eq = strchr(arg, '=');
+    if (eq == NULL)
+    {
+        print("export: invalid format, use: export KEY=VALUE\n");
+        return;
+    }
+
+    char key[32] = {0};
+    char val[64] = {0};
+
+    size_t klen = (size_t)(eq - arg);
+    if (klen >= sizeof(key)) klen = sizeof(key) - 1;
+    for (size_t i = 0; i < klen; i++) key[i] = arg[i];
+    key[klen] = '\0';
+
+    strcpy(val, eq + 1);
+    env_set(key, val);
+}
+
+/* ----------------------------------------------------
+ * Command History Store
+ * ---------------------------------------------------- */
+#define MAX_HISTORY 16
+static char s_history[MAX_HISTORY][128];
+static int s_history_count = 0;
+
+static void history_add(const char *cmd)
+{
+    if (cmd == NULL || cmd[0] == '\0') return;
+
+    if (s_history_count < MAX_HISTORY)
+    {
+        strcpy(s_history[s_history_count++], cmd);
+    }
+    else
+    {
+        for (int i = 1; i < MAX_HISTORY; i++)
+        {
+            strcpy(s_history[i - 1], s_history[i]);
+        }
+        strcpy(s_history[MAX_HISTORY - 1], cmd);
+    }
+}
+
+static void cmd_history(void)
+{
+    for (int i = 0; i < s_history_count; i++)
+    {
+        print("  ");
+        print_num((uint64_t)(i + 1));
+        print("  ");
+        println(s_history[i]);
+    }
+}
+
+/* ----------------------------------------------------
+ * Path Helper
+ * ---------------------------------------------------- */
 static void resolve_path(const char *path, char *out, size_t max_out)
 {
     while (*path == ' ')
@@ -37,18 +195,25 @@ static void resolve_path(const char *path, char *out, size_t max_out)
 static void cmd_help(void)
 {
     println("ZenithOS Linux-compatible User Shell:");
-    println("  ls [-l] [path]  - List directory contents");
-    println("  cd <path>       - Change current directory");
-    println("  pwd             - Print working directory");
-    println("  cat <file>      - Output file contents");
-    println("  echo <text>     - Display a line of text");
-    println("  clear           - Clear terminal screen");
-    println("  free / mem      - Display memory usage");
-    println("  uname [-a]      - Print system information");
-    println("  whoami          - Print current user");
-    println("  hostname        - Print system hostname");
-    println("  about           - About ZenithOS architecture");
-    println("  exit            - Exit the user shell");
+    println("  ls [-l] [path]    - List directory contents");
+    println("  cd <path>         - Change current directory");
+    println("  pwd               - Print working directory");
+    println("  touch <file>      - Create an empty file");
+    println("  mkdir <dir>       - Create a new directory");
+    println("  write <file> <tx> - Write text into a file");
+    println("  cat <file>        - Output file contents");
+    println("  env               - List environment variables");
+    println("  export KEY=VALUE  - Set environment variable");
+    println("  echo <text>       - Print text ($VAR supported)");
+    println("  history           - Show command history");
+    println("  free / mem        - Display memory usage");
+    println("  uname [-a]        - Print system information");
+    println("  whoami            - Print current user");
+    println("  hostname          - Print system hostname");
+    println("  uptime            - Show system uptime");
+    println("  clear             - Clear terminal screen");
+    println("  about             - About ZenithOS architecture");
+    println("  exit              - Exit the user shell");
 }
 
 static void cmd_uname(const char *arg)
@@ -68,12 +233,19 @@ static void cmd_uname(const char *arg)
 
 static void cmd_whoami(void)
 {
-    println("zenith");
+    println(env_get("USER"));
 }
 
 static void cmd_hostname(void)
 {
-    println("zenithos");
+    println(env_get("HOST"));
+}
+
+static void cmd_uptime(void)
+{
+    sysinfo_t info;
+    sysinfo(&info);
+    println("ZenithOS up and running (Ring 3 User Mode, 100 Hz PIT timer)");
 }
 
 static void cmd_pwd(void)
@@ -88,6 +260,7 @@ static void cmd_about(void)
     println("  1. Custom Ring 3 User-Mode Shell & Unix VFS Subsystem");
     println("  2. Native High-Performance Windowing & Desktop Compositor");
     println("  3. Built-in Applications: Terminal, Files, Settings, Calc, SysMon");
+    println("  4. Fully Customizable Environment & File Management (VFS ramfs)");
 }
 
 static void cmd_mem(void)
@@ -232,6 +405,95 @@ static void cmd_cd(const char *arg)
     strcpy(s_cwd, target);
 }
 
+static void cmd_touch(const char *arg)
+{
+    while (*arg == ' ') arg++;
+
+    if (*arg == '\0')
+    {
+        println("touch: missing file operand");
+        return;
+    }
+
+    char target[128];
+    resolve_path(arg, target, sizeof(target));
+
+    int rc = create(target);
+    if (rc != 0)
+    {
+        print("touch: cannot create file '");
+        print(target);
+        println("'");
+    }
+}
+
+static void cmd_mkdir(const char *arg)
+{
+    while (*arg == ' ') arg++;
+
+    if (*arg == '\0')
+    {
+        println("mkdir: missing operand");
+        return;
+    }
+
+    char target[128];
+    resolve_path(arg, target, sizeof(target));
+
+    int rc = mkdir(target);
+    if (rc != 0)
+    {
+        print("mkdir: cannot create directory '");
+        print(target);
+        println("'");
+    }
+}
+
+static void cmd_write(const char *arg)
+{
+    while (*arg == ' ') arg++;
+
+    if (*arg == '\0')
+    {
+        println("write: usage: write <file> <text>");
+        return;
+    }
+
+    char filename[64] = {0};
+    int i = 0;
+    while (*arg != ' ' && *arg != '\0' && i < 63)
+    {
+        filename[i++] = *arg++;
+    }
+    filename[i] = '\0';
+
+    while (*arg == ' ') arg++;
+
+    char target[128];
+    resolve_path(filename, target, sizeof(target));
+
+    // Try creating if doesn't exist
+    create(target);
+
+    int fd = open(target);
+    if (fd < 0)
+    {
+        print("write: cannot open file: ");
+        println(target);
+        return;
+    }
+
+    size_t text_len = strlen(arg);
+    if (text_len > 0)
+    {
+        write(fd, arg, (uint64_t)text_len);
+        write(fd, "\n", 1);
+    }
+    close(fd);
+    print("Wrote to ");
+    println(target);
+}
+
 static void cmd_cat(const char *arg)
 {
     while (*arg == ' ')
@@ -270,11 +532,35 @@ static void cmd_echo(const char *arg)
 {
     while (*arg == ' ')
         arg++;
-    println(arg);
+
+    // Check for $VARIABLE expansion
+    while (*arg != '\0')
+    {
+        if (*arg == '$')
+        {
+            arg++;
+            char var_name[32] = {0};
+            int vi = 0;
+            while (*arg != ' ' && *arg != '\0' && vi < 31)
+            {
+                var_name[vi++] = *arg++;
+            }
+            var_name[vi] = '\0';
+            print(env_get(var_name));
+        }
+        else
+        {
+            char c = *arg++;
+            write(1, &c, 1);
+        }
+    }
+    println("");
 }
 
 int main(void)
 {
+    env_init();
+
     println("");
     println("==============================================");
     println("     ZenithOS Interactive Shell (Ring 3)      ");
@@ -286,7 +572,11 @@ int main(void)
 
     for (;;)
     {
-        print("zenith:");
+        // Customizable Linux Bash style prompt: [user@host:cwd]$
+        print(env_get("USER"));
+        print("@");
+        print(env_get("HOST"));
+        print(":");
         print(s_cwd);
         print("$ ");
 
@@ -307,6 +597,8 @@ int main(void)
             continue;
         }
 
+        history_add(cmd);
+
         if (strcmp(cmd, "help") == 0)
         {
             cmd_help();
@@ -322,6 +614,22 @@ int main(void)
         else if (strcmp(cmd, "hostname") == 0)
         {
             cmd_hostname();
+        }
+        else if (strcmp(cmd, "uptime") == 0)
+        {
+            cmd_uptime();
+        }
+        else if (strcmp(cmd, "env") == 0)
+        {
+            cmd_env();
+        }
+        else if (strncmp(cmd, "export", 6) == 0 && (cmd[6] == ' ' || cmd[6] == '\0'))
+        {
+            cmd_export(cmd + 6);
+        }
+        else if (strcmp(cmd, "history") == 0)
+        {
+            cmd_history();
         }
         else if (strncmp(cmd, "uname", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
         {
@@ -346,6 +654,18 @@ int main(void)
         else if (strncmp(cmd, "cd", 2) == 0 && (cmd[2] == ' ' || cmd[2] == '\0'))
         {
             cmd_cd(cmd + 2);
+        }
+        else if (strncmp(cmd, "touch", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
+        {
+            cmd_touch(cmd + 5);
+        }
+        else if (strncmp(cmd, "mkdir", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
+        {
+            cmd_mkdir(cmd + 5);
+        }
+        else if (strncmp(cmd, "write", 5) == 0 && (cmd[5] == ' ' || cmd[5] == '\0'))
+        {
+            cmd_write(cmd + 5);
         }
         else if (strncmp(cmd, "echo", 4) == 0 && (cmd[4] == ' ' || cmd[4] == '\0'))
         {
