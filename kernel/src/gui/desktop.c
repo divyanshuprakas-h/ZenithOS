@@ -43,6 +43,50 @@ static void format_uint_local(uint64_t val, char *buf)
     buf[j] = '\0';
 }
 
+void desktop_draw_stats_bar(void)
+{
+    size_t fb_w = framebuffer_width();
+    if (fb_w == 0) return;
+
+    int area_w = 260;
+    int area_x = (int)fb_w - area_w;
+    fill_rect(area_x, 1, area_w, TOPBAR_HEIGHT - 2, GUI_TOPBAR_BG);
+
+    uint64_t total_mb = (pmm_get_total_pages() * 4096) / (1024 * 1024);
+    uint64_t used_mb = (pmm_get_used_pages() * 4096) / (1024 * 1024);
+    uint64_t sec = pit_ticks() / 100;
+    uint64_t mins = sec / 60;
+    uint64_t secs = sec % 60;
+
+    char num_buf[32];
+    char stats_buf[128];
+
+    k_strcpy(stats_buf, "RAM: ");
+    format_uint_local(used_mb, num_buf);
+    int p = k_strlen(stats_buf);
+    k_strcpy(stats_buf + p, num_buf);
+    p = k_strlen(stats_buf);
+    k_strcpy(stats_buf + p, "/");
+    format_uint_local(total_mb, num_buf);
+    p = k_strlen(stats_buf);
+    k_strcpy(stats_buf + p, num_buf);
+    p = k_strlen(stats_buf);
+    k_strcpy(stats_buf + p, "MB  |  UP: ");
+    format_uint_local(mins, num_buf);
+    p = k_strlen(stats_buf);
+    k_strcpy(stats_buf + p, num_buf);
+    p = k_strlen(stats_buf);
+    k_strcpy(stats_buf + p, "m ");
+    format_uint_local(secs, num_buf);
+    p = k_strlen(stats_buf);
+    k_strcpy(stats_buf + p, num_buf);
+    p = k_strlen(stats_buf);
+    k_strcpy(stats_buf + p, "s");
+
+    size_t stats_w = font_text_width_scaled(stats_buf, 1, 1);
+    draw_text_scaled((int)fb_w - (int)stats_w - 18, 14, stats_buf, g_gui_accent, 1, 1);
+}
+
 static void desktop_draw_background(void)
 {
     size_t fb_w = framebuffer_width();
@@ -94,39 +138,7 @@ static void desktop_draw_background(void)
     }
 
     // Right side: Real OS Metrics
-    uint64_t total_mb = (pmm_get_total_pages() * 4096) / (1024 * 1024);
-    uint64_t used_mb = (pmm_get_used_pages() * 4096) / (1024 * 1024);
-    uint64_t sec = pit_ticks() / 100;
-    uint64_t mins = sec / 60;
-    uint64_t secs = sec % 60;
-
-    char num_buf[32];
-    char stats_buf[128];
-
-    k_strcpy(stats_buf, "RAM: ");
-    format_uint_local(used_mb, num_buf);
-    int p = k_strlen(stats_buf);
-    k_strcpy(stats_buf + p, num_buf);
-    p = k_strlen(stats_buf);
-    k_strcpy(stats_buf + p, "/");
-    format_uint_local(total_mb, num_buf);
-    p = k_strlen(stats_buf);
-    k_strcpy(stats_buf + p, num_buf);
-    p = k_strlen(stats_buf);
-    k_strcpy(stats_buf + p, "MB  |  UP: ");
-    format_uint_local(mins, num_buf);
-    p = k_strlen(stats_buf);
-    k_strcpy(stats_buf + p, num_buf);
-    p = k_strlen(stats_buf);
-    k_strcpy(stats_buf + p, "m ");
-    format_uint_local(secs, num_buf);
-    p = k_strlen(stats_buf);
-    k_strcpy(stats_buf + p, num_buf);
-    p = k_strlen(stats_buf);
-    k_strcpy(stats_buf + p, "s");
-
-    size_t stats_w = font_text_width_scaled(stats_buf, 1, 1);
-    draw_text_scaled((int)fb_w - (int)stats_w - 18, 14, stats_buf, g_gui_accent, 1, 1);
+    desktop_draw_stats_bar();
 
     // 3. Dock
     fill_rect(0, TOPBAR_HEIGHT, DOCK_WIDTH, fb_h - TOPBAR_HEIGHT, GUI_DOCK_BG);

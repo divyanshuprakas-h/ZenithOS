@@ -229,10 +229,10 @@ static void compositor_task(void)
     while (1)
     {
         uint64_t now = pit_ticks();
-        if (now - last_stats_tick >= g_compositor_interval)
+        if (now - last_stats_tick >= 100) // 1 Hz (1 second) pacing for clock & system metrics
         {
             last_stats_tick = now;
-            gui_needs_redraw = true;
+            desktop_draw_stats_bar();
         }
 
         if (gui_needs_redraw)
