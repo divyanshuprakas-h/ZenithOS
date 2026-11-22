@@ -24,6 +24,9 @@ static terminal_cell_t terminal_buffer[TERM_ROWS][TERM_COLS];
 
 static uint32_t terminal_color = 0xFFFFFF;
 
+static int ansi_state = 0;
+static int ansi_arg = 0;
+
 static int terminal_origin_x = 0;
 static int terminal_origin_y = 0;
 static bool terminal_visible_flag = true;
@@ -70,6 +73,8 @@ void terminal_init(void)
     cursor_row = 0;
     cursor_col = 0;
     terminal_color = 0xFFFFFF;
+    ansi_state = 0;
+    ansi_arg = 0;
     line_len = 0;
     stdin_head = 0;
     stdin_tail = 0;
@@ -105,6 +110,71 @@ void terminal_clear(void)
 
 void terminal_putchar(char c)
 {
+    if (ansi_state == 0)
+    {
+        if (c == '\033' || (uint8_t)c == 0x1B)
+        {
+            ansi_state = 1;
+            return;
+        }
+    }
+    else if (ansi_state == 1)
+    {
+        if (c == '[')
+        {
+            ansi_state = 2;
+            ansi_arg = 0;
+            return;
+        }
+        ansi_state = 0;
+    }
+    else if (ansi_state == 2)
+    {
+        if (c >= '0' && c <= '9')
+        {
+            ansi_arg = ansi_arg * 10 + (c - '0');
+            return;
+        }
+        else if (c == ';')
+        {
+            if (ansi_arg == 0) terminal_color = 0xFFFFFF;
+            else if (ansi_arg == 31) terminal_color = 0xEF4444;
+            else if (ansi_arg == 32) terminal_color = 0x22C55E;
+            else if (ansi_arg == 33) terminal_color = 0xF59E0B;
+            else if (ansi_arg == 34) terminal_color = 0x38BDF8;
+            else if (ansi_arg == 35) terminal_color = 0xA855F7;
+            else if (ansi_arg == 36) terminal_color = 0x06B6D4;
+            else if (ansi_arg == 37) terminal_color = 0xFFFFFF;
+            else if (ansi_arg == 90) terminal_color = 0x64748B;
+            else if (ansi_arg == 92) terminal_color = 0x4ADE80;
+            else if (ansi_arg == 94) terminal_color = 0x60A5FA;
+            ansi_arg = 0;
+            return;
+        }
+        else if (c == 'm')
+        {
+            if (ansi_arg == 0) terminal_color = 0xFFFFFF;
+            else if (ansi_arg == 30) terminal_color = 0x64748B;
+            else if (ansi_arg == 31) terminal_color = 0xEF4444;
+            else if (ansi_arg == 32) terminal_color = 0x22C55E;
+            else if (ansi_arg == 33) terminal_color = 0xF59E0B;
+            else if (ansi_arg == 34) terminal_color = 0x38BDF8;
+            else if (ansi_arg == 35) terminal_color = 0xA855F7;
+            else if (ansi_arg == 36) terminal_color = 0x06B6D4;
+            else if (ansi_arg == 37) terminal_color = 0xFFFFFF;
+            else if (ansi_arg == 90) terminal_color = 0x64748B;
+            else if (ansi_arg == 92) terminal_color = 0x4ADE80;
+            else if (ansi_arg == 94) terminal_color = 0x60A5FA;
+            ansi_state = 0;
+            return;
+        }
+        else
+        {
+            ansi_state = 0;
+            return;
+        }
+    }
+
     if (c == '\f')
     {
         terminal_clear();
